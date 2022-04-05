@@ -25,7 +25,7 @@ volunteers = {}
 #         'testroot']
 # os.sep is used if starting from root
 
-scratchdir = ['.', 'scratchroot']
+scratchdir = ['.', 'forms']
 
 #scratchdir = ['c:', os.sep,
 #                'Users', 'JD1060',

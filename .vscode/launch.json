@@ -8,7 +8,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["-h"]
+            "args": ["-d", "split", "./forms/Covid-Forms-12-22-2021.pdf"]
         }
     ]
 }
