@@ -68,16 +68,17 @@ def _exec_shell_command(command):
     prc = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE)
-    ret = prc.wait()
-    if ret != 0:
-        raise Exception(prc.stderr.read().decode())
 
+    err = ''
     out = prc.stdout.read().decode()
     if out != '':
-        print(prc.stdout.read().decode())
+        logging.debug("_exec_shell_command: {}".format(out))
+    else:
+        err = prc.stderr.read().decode()
+        if err != '':
+            logging.error("_exec_shell_command: {}".format(err))
 
-    return ret
-
+    return [out, err]
 
 def _get_filewithpath(path, filename):
     logging.debug("_get_filewithpath({}, {})".format(path, filename))
@@ -465,9 +466,23 @@ def split(args):
     filetobesplit = args.filename
     logging.debug("filetobesplit: {}".format(filetobesplit))
 
+    # Get the current association with .pdf
+    # and change it to MSEdgePDF
+    pdftype = ''
+    if os.name == 'nt':
+        out, err = _exec_shell_command('assoc .pdf')
+        if out != '':
+            out = out.rstrip().split('=')
+            if len(out) == 2:
+                pdftype = out[1]
+                _exec_shell_command('assoc .pdf=MSEdgePDF')
+
     # Get some input
     _split_pdf(filetobesplit, args.create)
 
+    # Change the associate for .pdf back
+    if os.name == 'nt':
+        _exec_shell_command('assoc .pdf={}'.format(pdftype))
 
 def _extract_name_date(msg):
     logging.debug("_extract_name_date(msg)")
