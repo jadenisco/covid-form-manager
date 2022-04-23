@@ -7,7 +7,6 @@ import calendar
 import email
 from email.header import decode_header
 import shutil
-from eml_parser.eml_parser import decode_email
 from termcolor import colored
 from PyPDF2 import PdfFileReader, PdfFileWriter
 
@@ -50,8 +49,10 @@ tmpfilename = 'tmp.pdf'
 # Volunteer root directories
 adult_volunteer_root = ['.Volunteer Files', 'ADULT MEDICAL AND NONMEDICAL']
 junior_volunteer_root = ['.Volunteer Files', 'JUNIOR MEDICAL AND NONMEDICAL']
+pet_volunteer_root = ['.Volunteer Files', 'Pet Therapy']
 adult_root_dir = ''
 junior_root_dir = ''
+pet_root_dir = ''
 volunteer_dir_db = {}
 volunteer_name_dir_db = {}
 
@@ -231,6 +232,7 @@ def _create_directory_db(root_dir):
 
     for name in os.listdir(root_dir):
         namewithpath = os.path.join(root_dir, name)
+        logging.debug("namewithpath: {}".format(namewithpath))
         if os.path.isdir(namewithpath):
             vol_num = name.split(' ')[0]
             logging.debug("dir: {} {}".format(vol_num, namewithpath))
@@ -239,6 +241,7 @@ def _create_directory_db(root_dir):
 
 
 def _create_volunteer_directory_db():
+    global pet_root_dir
     global adult_root_dir
     global junior_root_dir
     global volunteer_dir_db
@@ -248,6 +251,7 @@ def _create_volunteer_directory_db():
     volunteer_dir_db = {}
     _create_directory_db(adult_root_dir)
     _create_directory_db(junior_root_dir)
+    _create_directory_db(pet_root_dir)
 
 
 def _create_volunteer_directory(volunteer_number):
@@ -267,7 +271,7 @@ def _create_volunteer_directory(volunteer_number):
             os.makedirs(dirname)
             volunteer_dir_db[volunteer_number] = dirname
     else:
-        logging.debug(colored('A Directory for {} already exists'.format(volunteer_number), 'red'))
+        logging.debug('A Directory for {} already exists'.format(volunteer_number))
 
 
 def _get_pagefilename(pagenumber):
@@ -386,7 +390,8 @@ def _execute_move(src, dst):
     if not os.path.isdir(cv_form_dir):
         os.makedirs(cv_form_dir)
 
-    filename = os.path.basename(src)
+    src_len = len(src.split(os.sep))
+    filename = src.split(os.sep)[src_len-1]
     filewithpath = os.path.join(cv_form_dir, filename)
     if not os.path.isfile(filewithpath):
         shutil.move(src, cv_form_dir)
@@ -429,16 +434,16 @@ def move(args):
 
             if vol_num in volunteer_dir_db.keys():
                 dst = volunteer_dir_db[vol_num]
-                print("\nMoving file from: {}".format(src))
-                print("To: {}\n".format(dst))
-                ans = input("Is this ok y/n [n]?  ")
-                ans.lower()
-                if ans == 'y':
-                    _execute_move(src, dst)
+                print("Moving file from: {}".format(src))
+                print("To: {}".format(dst))
+                # ans = input("Is this ok y/n [n]?  ")
+                # ans.lower()
+                # if ans == 'y':
+                _execute_move(src, dst)
             else:
-                print(colored("The Directory for {} was not found.".format(src), 'red'))
+                print("The Directory for {} was not found.".format(src))
         else:
-            print(colored("The file {} was not moved.".format(src), 'red'))
+            print("The file {} was not moved.".format(src))
 
 
 def split(args):
@@ -578,6 +583,7 @@ def read_emails(args):
 def mgh_util(args):
     global adult_root_dir
     global junior_root_dir
+    global pet_root_dir
 
     if args.debug:
         logging.basicConfig(level=logging.DEBUG)
@@ -596,6 +602,10 @@ def mgh_util(args):
     junior_root_dir = t_root
     for jvr in junior_volunteer_root:
         junior_root_dir = os.path.join(junior_root_dir, jvr)
+
+    pet_root_dir = t_root
+    for pvr in pet_volunteer_root:
+        pet_root_dir = os.path.join(pet_root_dir, pvr)
 
     if args.func:
         return args.func(args)
