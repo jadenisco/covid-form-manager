@@ -13,3 +13,8 @@ There are functions to do the following:
 * move
 
     Move the files created from split to the appropriate directories.
+
+* Create the shortcut
+
+    The shortcut should look something like:
+    "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -noexit -ExecutionPolicy Bypass -File \\Cifs2\voldept$\Scripts\covid-form-manager\covid-forms.ps1"

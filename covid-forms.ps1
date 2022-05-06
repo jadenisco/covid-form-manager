@@ -1,11 +1,11 @@
 Write-Host "The Covid Form Manager"
-# Write-Host -NoNewLine 'Press any key to continue...';
-# $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown');
 //cifs2/voldept$/Scripts/covid-form-manager/.venv/Scripts/Activate.ps1
-Write-Host
 Set-Location //cifs2/voldept$/Scripts/covid-form-manager
-python.exe ./covid-forms.py split '.\forms\Covid Forms 04-19-2022.pdf'
-deactivate
+python.exe ./covid-forms.py -d split './forms/Covid Forms 04-19-2022.pdf'
+# python.exe ./covid-forms.py split '.\forms\Covid Forms 04-19-2022.pdf'
+# deactivate
+# Write-Host -NoNewLine 'Press any key to exit...';
+# $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown');
 
 <#
 (.venv) PS Microsoft.PowerShell.Core\FileSystem::\\cifs2\voldept$\Scripts\covid-form-manager>  & '\\cifs2\voldept$\Scripts\covid-form-manager\.venv\Scripts\python.exe' 'c:\Users\JD1060\.vscode\extensions\ms-python.python-2022.4.1\pythonFiles\lib\python\debugpy\launcher' '53356' '--' '\\cifs2\voldept$\Scripts\covid-form-manager\covid-forms.py' '-d' 'split' './forms/Covid-Forms-12-22-2021.pdf'
