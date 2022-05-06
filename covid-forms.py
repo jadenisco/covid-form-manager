@@ -330,6 +330,7 @@ def _split_pdf(file_to_split, createdir):
         tmpfile = tmpfilename
         tmpfile = _get_filewithpath(scratchdir, tmpfile)
 
+        tmpfile = os.path.abspath(tmpfile)
         logging.debug("Creating a temporary file: {}".format(tmpfile))
         with open(tmpfile, 'wb') as out:
             pdf_writer.write(out)
