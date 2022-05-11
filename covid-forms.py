@@ -62,6 +62,18 @@ day_on_form = '15'
 year_on_form = '2021'
 use_previous_date = False
 
+def _ask_y_n(question, default='y'):
+
+    while True:
+        answer = input("{} [{}]?: ".format(question, default))
+        if answer == '':
+            answer = default
+        answer = answer.lower()
+        if answer == 'y' or answer == 'n':
+            break
+        print("Invalid input, Please enter y or n.")
+
+    return answer
 
 def _exec_shell_command(command):
     logging.debug("_exec_shell_command({})".format(command))
@@ -446,6 +458,40 @@ def move(args):
         else:
             print("The file {} was not moved.".format(src))
 
+def _get_file():
+    global scratchdir
+
+    logging.debug("getfile()")
+
+    scratchpath = ''
+    for sp in scratchdir:
+        scratchpath = os.path.join(scratchpath, sp)
+    scratchpath = os.path.abspath(scratchpath)
+
+    for fname in os.listdir(scratchpath):
+        file_with_path = os.path.join(scratchpath, fname)
+        if os.path.isfile(file_with_path):
+            _show_pdf(file_with_path)
+            answer = _ask_y_n("Do you want to split the file {}".format(fname), default='n')
+            if answer == 'y':
+                return file_with_path
+
+    return None
+
+def _rename_file(src):
+    logging.debug("_rename_file({})".format(src))
+
+    print("The file we are going to split is: {}".format(src))
+    dst = input("What would you like to rename it to: ")
+    if os.sep not in dst:
+        dst = os.path.join(os.path.dirname(src), dst)
+    ds = dst.split('.')
+    if len(ds) > 0 and ds[len(ds)-1] != 'pdf':
+        dst = dst + '.pdf'
+    
+    logging.debug("The new filename is: {}".format(dst))
+    os.rename(src, dst)
+    return dst
 
 def split(args):
     """
@@ -467,10 +513,20 @@ def split(args):
 
     """
 
-    logging.debug("split_move({})".format(args))
+    logging.debug("split({})".format(args))
 
-    filetobesplit = args.filename
+    if args.file:
+        filetobesplit = args.file
+    else:
+        filetobesplit = _get_file()
+    if filetobesplit == None:
+        logging.error("There is not a valid file to split!")
+
     logging.debug("filetobesplit: {}".format(filetobesplit))
+
+    answer = _ask_y_n("Would you like to rename the file: {}".format(os.path.basename(filetobesplit)))
+    if(answer == 'y'):
+        filetobesplit = _rename_file(filetobesplit)
 
     # Get the current association with .pdf
     # and change it to MSEdgePDF
@@ -630,7 +686,7 @@ if __name__ == '__main__':
     v_parser.set_defaults(func=validate_forms)
 
     sm_parser = sub_parsers.add_parser('split', help='Split the scanned pdf file')
-    sm_parser.add_argument('filename', help='The pdf file to be split and moved')
+    sm_parser.add_argument('--file', '-f', help='The pdf file to be split and moved')
     sm_parser.set_defaults(func=split)
 
     sm_parser = sub_parsers.add_parser('read-emails', help='read emails')
