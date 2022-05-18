@@ -15,6 +15,16 @@ from PyPDF2 import PdfFileReader, PdfFileWriter
 # number: , last name: , first name:, service dates[]:
 volunteers = {}
 
+vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
+script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
+forms_dir = script_dir + '/forms'
+
+# Volunteer root directories
+adult_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/ADULT MEDICAL AND NONMEDICAL'
+junior_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/JUNIOR MEDICAL AND NONMEDICAL'
+pet_volunteer_root_dir = None
+# pet_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/Pet Therapy'
+
 # System Root directory
 # s_root = ['Users',
 #          'jdenisco',
@@ -24,14 +34,16 @@ volunteers = {}
 #         'testroot']
 # os.sep is used if starting from root
 
-scratchdir = ['.', 'forms']
+#testroot = ''
+
+#scratch_dir = './forms'
 
 #scratchdir = ['c:', os.sep,
 #                'Users', 'JD1060',
 #                'Developer', 'MrJohnsPython',
 #                'mgh-util', 'scratchroot']
 
-testroot = ['.', 'testroot']
+#testroot = ['.', 'testroot']
 # testroot = ['z:', os.sep, 'Developer',
 #            'MrJohnsPython',
 #            'mgh-util',
@@ -43,16 +55,12 @@ testroot = ['.', 'testroot']
 
 # testroot = ['.']
 
-createdfileroot = 'COVID 19 Day Pass - CLEARED FOR WORK'
-tmpfilename = 'tmp.pdf'
+created_file_root = 'COVID 19 Day Pass - CLEARED FOR WORK'
+tmp_filename = 'tmp.pdf'
 
-# Volunteer root directories
-adult_volunteer_root = ['.Volunteer Files', 'ADULT MEDICAL AND NONMEDICAL']
-junior_volunteer_root = ['.Volunteer Files', 'JUNIOR MEDICAL AND NONMEDICAL']
-pet_volunteer_root = ['.Volunteer Files', 'Pet Therapy']
-adult_root_dir = ''
-junior_root_dir = ''
-pet_root_dir = ''
+#adult_root_dir = ''
+#junior_root_dir = ''
+#pet_root_dir = ''
 volunteer_dir_db = {}
 volunteer_name_dir_db = {}
 
@@ -92,17 +100,6 @@ def _exec_shell_command(command):
             logging.error("_exec_shell_command: {}".format(err))
 
     return [out, err]
-
-def _get_filewithpath(path, filename):
-    logging.debug("_get_filewithpath({}, {})".format(path, filename))
-
-    pathwithfile = ''
-    for pth in path:
-        pathwithfile = os.path.join(pathwithfile, pth)
-    pathwithfile = os.path.join(pathwithfile, filename)
-
-    return pathwithfile
-
 
 def read_dict():
     logging.debug('read_dict()')
@@ -193,13 +190,13 @@ def create_validate_forms(create_form):
                     print(colored('The covid form DOES NOT EXIST for {}'.format(fname_with_dir), 'red'))
 
 
-def _show_pdf(pdffilename):
-    logging.debug('_show_pdf({}):'.format(pdffilename))
+def _show_pdf(pdf_filename):
+    logging.debug('_show_pdf({}):'.format(pdf_filename))
 
     if os.name == 'nt':
-        _exec_shell_command('start {}'.format(pdffilename))
+        _exec_shell_command('start {}'.format(pdf_filename))
     elif os.name == 'posix':
-        _exec_shell_command('open {}'.format(pdffilename))
+        _exec_shell_command('open {}'.format(pdf_filename))
     else:
         raise Exception('Unsupported Operating System')
 
@@ -242,7 +239,10 @@ def _create_directory_db(root_dir):
 
     logging.debug("_build_directory_db({})".format(root_dir))
 
-    for name in os.listdir(root_dir):
+    if not root_dir:
+        return
+
+    for name in os.listdir(os.path.abspath(root_dir)):
         namewithpath = os.path.join(root_dir, name)
         logging.debug("namewithpath: {}".format(namewithpath))
         if os.path.isdir(namewithpath):
@@ -253,17 +253,17 @@ def _create_directory_db(root_dir):
 
 
 def _create_volunteer_directory_db():
-    global pet_root_dir
-    global adult_root_dir
-    global junior_root_dir
+    global adult_volunteer_root_dir
+    global junior_volunteer_root_dir
+    global pet_volunteer_root_dir
     global volunteer_dir_db
 
     logging.debug("_build_volunteer_directory_db()")
 
     volunteer_dir_db = {}
-    _create_directory_db(adult_root_dir)
-    _create_directory_db(junior_root_dir)
-    _create_directory_db(pet_root_dir)
+    _create_directory_db(adult_volunteer_root_dir)
+    _create_directory_db(junior_volunteer_root_dir)
+    _create_directory_db(pet_volunteer_root_dir)
 
 
 def _create_volunteer_directory(volunteer_number):
@@ -286,14 +286,14 @@ def _create_volunteer_directory(volunteer_number):
         logging.debug('A Directory for {} already exists'.format(volunteer_number))
 
 
-def _get_pagefilename(pagenumber):
+def _get_page_filename(page_number):
     global month_on_form
     global day_on_form
     global year_on_form
-    global createdfileroot
+    global created_file_root
     global use_previous_date
 
-    logging.debug("_get_get_pagefilename()")
+    logging.debug("_get_get_page_filename()")
 
     # Get the date to be used in the file name
     if use_previous_date == False:
@@ -318,7 +318,7 @@ def _get_pagefilename(pagenumber):
     if len(answer) != 0:
         volunteernumber = answer
     else:
-        volunteernumber = '({})'.format(pagenumber)
+        volunteernumber = '({})'.format(page_number)
 
     pagefile = '{} {}_{}_{}-{}.pdf'.format(createdfileroot, month_on_form, day_on_form, year_on_form, volunteernumber)
     pagefilewithpath = _get_filewithpath(scratchdir, pagefile)
@@ -326,10 +326,10 @@ def _get_pagefilename(pagenumber):
     return pagefilewithpath, volunteernumber
 
 
-def _split_pdf(file_to_split, createdir):
+def _split_pdf(file_to_split, create_dir):
     logging.debug('split_pdf({}):'.format(file_to_split))
 
-    if createdir:
+    if create_dir:
         _create_volunteer_directory_db()
 
     # Split the file
@@ -339,19 +339,17 @@ def _split_pdf(file_to_split, createdir):
         pdf_writer = PdfFileWriter()
         pdf_writer.addPage(pdf.getPage(page))
 
-        tmpfile = tmpfilename
-        tmpfile = _get_filewithpath(scratchdir, tmpfile)
-
-        tmpfile = os.path.abspath(tmpfile)
-        logging.debug("Creating a temporary file: {}".format(tmpfile))
-        with open(tmpfile, 'wb') as out:
+        tpf = os.path.join(os.path.abspath(forms_dir), tmp_filename)
+        logging.debug("Creating a temporary file: {}".format(tpf))
+        with open(tpf, 'wb') as out:
             pdf_writer.write(out)
 
-        _show_pdf(tmpfile)
+        _show_pdf(tpf)
 
-        pagefilewithpath, volunteer_number = _get_pagefilename(page)
+        # jadfix: start here
+        pagefilewithpath, volunteer_number = _get_page_filename(page)
 
-        if createdir:
+        if create_dir:
             _create_volunteer_directory(volunteer_number)
         else:
             print("Creating file: {}, {}".format(volunteer_number, pagefilewithpath))
@@ -422,19 +420,17 @@ def move(args):
     Example: python covid-forms.py move
 
     """
-    global scratchdir
+    global scratch_dir
     global volunteer_dir_db
 
     logging.debug("move({})".format(args))
 
     _create_volunteer_directory_db()
 
-    scratchpath = ''
-    for sp in scratchdir:
-        scratchpath = os.path.join(scratchpath, sp)
-
-    for name in os.listdir(scratchpath):
-        src = os.path.join(scratchpath, name)
+    # Move the files
+    fd = os.path.abspath(forms_dir)
+    for name in os.listdir(fd):
+        src = os.path.join(fd, name)
         if not os.path.isfile(src):
             logging.debug("{} is not a file.".format(src))
             continue
@@ -459,17 +455,13 @@ def move(args):
             print("The file {} was not moved.".format(src))
 
 def _get_file():
-    global scratchdir
+    global forms_dir
 
     logging.debug("getfile()")
 
-    scratchpath = ''
-    for sp in scratchdir:
-        scratchpath = os.path.join(scratchpath, sp)
-    scratchpath = os.path.abspath(scratchpath)
-
-    for fname in os.listdir(scratchpath):
-        file_with_path = os.path.join(scratchpath, fname)
+    fd = os.path.abspath(forms_dir)
+    for fname in os.listdir(fd):
+        file_with_path = os.path.join(fd, fname)
         if os.path.isfile(file_with_path):
             _show_pdf(file_with_path)
             answer = _ask_y_n("Do you want to split the file {}".format(fname), default='n')
@@ -516,35 +508,35 @@ def split(args):
     logging.debug("split({})".format(args))
 
     if args.file:
-        filetobesplit = args.file
+        file_to_split = args.file
     else:
-        filetobesplit = _get_file()
-    if filetobesplit == None:
+        file_to_split = _get_file()
+    if file_to_split == None:
         logging.error("There is not a valid file to split!")
 
-    logging.debug("filetobesplit: {}".format(filetobesplit))
+    logging.debug("file_to_split: {}".format(file_to_split))
 
-    answer = _ask_y_n("Would you like to rename the file: {}".format(os.path.basename(filetobesplit)))
+    answer = _ask_y_n("Would you like to rename the file: {}".format(os.path.basename(file_to_split)))
     if(answer == 'y'):
-        filetobesplit = _rename_file(filetobesplit)
+        file_to_split = _rename_file(file_to_split)
 
     # Get the current association with .pdf
     # and change it to MSEdgePDF
-    pdftype = ''
+    pdf_type = ''
     if os.name == 'nt':
         out, err = _exec_shell_command('assoc .pdf')
         if out != '':
             out = out.rstrip().split('=')
             if len(out) == 2:
-                pdftype = out[1]
+                pdf_type = out[1]
                 _exec_shell_command('assoc .pdf=MSEdgePDF')
 
     # Get some input
-    _split_pdf(filetobesplit, args.create)
+    _split_pdf(file_to_split, args.create)
 
     # Change the associate for .pdf back
     if os.name == 'nt':
-        _exec_shell_command('assoc .pdf={}'.format(pdftype))
+        _exec_shell_command('assoc .pdf={}'.format(pdf_type))
 
 def _extract_name_date(msg):
     logging.debug("_extract_name_date(msg)")
@@ -647,6 +639,7 @@ def mgh_util(args):
 
     logging.debug("mgh_util({})".format(args))
 
+    """
     # Get the volunteer root directories
     t_root = ''
     for tr in testroot:
@@ -663,6 +656,7 @@ def mgh_util(args):
     pet_root_dir = t_root
     for pvr in pet_volunteer_root:
         pet_root_dir = os.path.join(pet_root_dir, pvr)
+    """
 
     if args.func:
         return args.func(args)
