@@ -15,8 +15,10 @@ from PyPDF2 import PdfFileReader, PdfFileWriter
 # number: , last name: , first name:, service dates[]:
 volunteers = {}
 
-vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
-script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
+# vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
+vol_root_dir = 'z:/Developer/Windows/testroot'
+# script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
+script_dir = vol_root_dir + '/scripts/covid-form-manager'
 forms_dir = script_dir + '/forms'
 
 # Volunteer root directories
