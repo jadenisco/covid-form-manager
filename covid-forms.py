@@ -15,10 +15,10 @@ from PyPDF2 import PdfFileReader, PdfFileWriter
 # number: , last name: , first name:, service dates[]:
 volunteers = {}
 
-# vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
-vol_root_dir = 'z:/Developer/Windows/testroot'
-# script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
-script_dir = vol_root_dir + '/scripts/covid-form-manager'
+vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
+#vol_root_dir = 'z:/Developer/Windows/testroot'
+script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
+# script_dir = vol_root_dir + '/scripts/covid-form-manager'
 forms_dir = script_dir + '/forms'
 
 # Volunteer root directories
@@ -195,14 +195,17 @@ def create_validate_forms(create_form):
 def _show_pdf(pdf_filename):
     logging.debug('_show_pdf({}):'.format(pdf_filename))
 
+# jadfix Uncomment this
+'''
     if os.name == 'nt':
         _exec_shell_command('start {}'.format(pdf_filename))
     elif os.name == 'posix':
         _exec_shell_command('open {}'.format(pdf_filename))
     else:
         raise Exception('Unsupported Operating System')
+'''
 
-
+# jadfix: look here
 def _create_name_directory_db(root_dir):
     global volunteer_name_dir_db
 
@@ -224,6 +227,7 @@ def _create_name_directory_db(root_dir):
                 volunteer_name_dir_db[key] = db_entry_list
 
 
+# jadfix: Look here 
 def _create_volunteer_name_directory_db():
     global adult_root_dir
     global junior_root_dir
@@ -232,6 +236,7 @@ def _create_volunteer_name_directory_db():
     logging.debug("_create_volunteer_name_directory_db()")
 
     volunteer_name_dir_db = {}
+    
     _create_name_directory_db(adult_root_dir)
     _create_name_directory_db(junior_root_dir)
 
@@ -244,8 +249,9 @@ def _create_directory_db(root_dir):
     if not root_dir:
         return
 
-    for name in os.listdir(os.path.abspath(root_dir)):
-        namewithpath = os.path.join(root_dir, name)
+    rd = os.path.abspath(root_dir)
+    for name in os.listdir(rd):
+        namewithpath = os.path.join(rd, name)
         logging.debug("namewithpath: {}".format(namewithpath))
         if os.path.isdir(namewithpath):
             vol_num = name.split(' ')[0]
@@ -295,7 +301,7 @@ def _get_page_filename(page_number):
     global created_file_root
     global use_previous_date
 
-    logging.debug("_get_get_page_filename()")
+    logging.debug("_get_get_page_filename({})".format(page_number))
 
     # Get the date to be used in the file name
     if use_previous_date == False:
@@ -311,21 +317,21 @@ def _get_page_filename(page_number):
         if len(answer) != 0:
             year_on_form = answer
 
-        answer = input("Do you want to use the same date for every page [n]: ")
+        answer = _ask_y_n("Do you want to use the same date for every page ", default='n')
         if answer.lower() == 'y':
             use_previous_date = True
 
     # Get the volunteer number
     answer = input("Enter the volunteer number on the form: ")
     if len(answer) != 0:
-        volunteernumber = answer
+        volunteer_number = answer
     else:
-        volunteernumber = '({})'.format(page_number)
+        volunteer_number = '({})'.format(page_number)
 
-    pagefile = '{} {}_{}_{}-{}.pdf'.format(createdfileroot, month_on_form, day_on_form, year_on_form, volunteernumber)
-    pagefilewithpath = _get_filewithpath(scratchdir, pagefile)
-
-    return pagefilewithpath, volunteernumber
+    page_filename = '{} {}_{}_{}-{}.pdf'.format(created_file_root, month_on_form, day_on_form, year_on_form, volunteer_number)
+    page_filename = os.path.join(os.path.abspath(forms_dir), page_filename)
+  
+    return page_filename, volunteer_number
 
 
 def _split_pdf(file_to_split, create_dir):
@@ -348,17 +354,17 @@ def _split_pdf(file_to_split, create_dir):
 
         _show_pdf(tpf)
 
-        # jadfix: start here
-        pagefilewithpath, volunteer_number = _get_page_filename(page)
+        single_page_file, volunteer_number = _get_page_filename(page)
 
         if create_dir:
             _create_volunteer_directory(volunteer_number)
         else:
-            print("Creating file: {}, {}".format(volunteer_number, pagefilewithpath))
-            if not os.path.isfile(pagefilewithpath):
-                os.rename(tmpfile, pagefilewithpath)
+            print("Creating file: {}, {}".format(volunteer_number, single_page_file))
+            if not os.path.isfile(single_page_file):
+                fd = os.path.abspath(forms_dir)
+                os.rename(os.path.join(fd, tmp_filename), os.path.join(fd, single_page_file))
             else:
-                print("The file {} already exists".format(pagefilewithpath))
+                print("The file {} already exists".format(single_page_file))
 
 
 def validate_forms(args):
@@ -403,13 +409,12 @@ def _execute_move(src, dst):
     if not os.path.isdir(cv_form_dir):
         os.makedirs(cv_form_dir)
 
-    src_len = len(src.split(os.sep))
-    filename = src.split(os.sep)[src_len-1]
-    filewithpath = os.path.join(cv_form_dir, filename)
-    if not os.path.isfile(filewithpath):
+    filename = os.path.basename(src)
+    dst_file = os.path.join(cv_form_dir, filename)
+    if not os.path.isfile(dst_file):
         shutil.move(src, cv_form_dir)
     else:
-        print("\nThe file {} already exists".format(filewithpath))
+        print("\nThe file {} already exists".format(dst_file))
 
 
 def move(args):
@@ -513,8 +518,9 @@ def split(args):
         file_to_split = args.file
     else:
         file_to_split = _get_file()
-    if file_to_split == None:
-        logging.error("There is not a valid file to split!")
+        if file_to_split == None:
+            print("There is not a valid file to split, please try again.")
+            return
 
     logging.debug("file_to_split: {}".format(file_to_split))
 
