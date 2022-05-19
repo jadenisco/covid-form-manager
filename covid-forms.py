@@ -16,7 +16,8 @@ from PyPDF2 import PdfFileReader, PdfFileWriter
 volunteers = {}
 
 vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
-#vol_root_dir = 'z:/Developer/Windows/testroot'
+# vol_root_dir = 'z:/Developer/Windows/testroot'
+# vol_root_dir = '/Cifs2/voldept$'
 script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
 # script_dir = vol_root_dir + '/scripts/covid-form-manager'
 forms_dir = script_dir + '/forms'
@@ -27,42 +28,11 @@ junior_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/JUNIOR MEDICAL AND
 pet_volunteer_root_dir = None
 # pet_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/Pet Therapy'
 
-# System Root directory
-# s_root = ['Users',
-#          'jdenisco',
-#         'Developer',
-#         'MrJohnsPython',
-#         'mgh-util',
-#         'testroot']
-# os.sep is used if starting from root
-
-#testroot = ''
-
-#scratch_dir = './forms'
-
-#scratchdir = ['c:', os.sep,
-#                'Users', 'JD1060',
-#                'Developer', 'MrJohnsPython',
-#                'mgh-util', 'scratchroot']
-
-#testroot = ['.', 'testroot']
-# testroot = ['z:', os.sep, 'Developer',
-#            'MrJohnsPython',
-#            'mgh-util',
-#            'testroot']
-#
-
-# testroot = [os.sep, 'Cifs2',
-#            'voldept$']
-
-# testroot = ['.']
+# testroot = [os.sep, 'Cifs2', 'voldept$']
 
 created_file_root = 'COVID 19 Day Pass - CLEARED FOR WORK'
 tmp_filename = 'tmp.pdf'
 
-#adult_root_dir = ''
-#junior_root_dir = ''
-#pet_root_dir = ''
 volunteer_dir_db = {}
 volunteer_name_dir_db = {}
 
