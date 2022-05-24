@@ -15,18 +15,19 @@ from PyPDF2 import PdfFileReader, PdfFileWriter
 # number: , last name: , first name:, service dates[]:
 volunteers = {}
 
-vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
+# vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
 # vol_root_dir = 'z:/Developer/Windows/testroot'
-# vol_root_dir = '/Cifs2/voldept$'
-script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
-# script_dir = vol_root_dir + '/scripts/covid-form-manager'
-forms_dir = script_dir + '/forms'
+vol_root_dir = '//Cifs2/voldept$'
+#script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
+script_dir = vol_root_dir + '/scripts/covid-form-manager'
+# forms_dir = vol_root_dir + '/.Volunteer Files/RICOH/jad'
+forms_dir = './forms'
 
 # Volunteer root directories
 adult_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/ADULT MEDICAL AND NONMEDICAL'
-junior_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/JUNIOR MEDICAL AND NONMEDICAL'
-pet_volunteer_root_dir = None
-# pet_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/Pet Therapy'
+junior_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/JUNIOR MEDICAL AND NONMEDICAL/Active JR Volunteers'
+# pet_volunteer_root_dir = None
+pet_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/Pet Therapy'
 
 # testroot = [os.sep, 'Cifs2', 'voldept$']
 
@@ -37,9 +38,9 @@ volunteer_dir_db = {}
 volunteer_name_dir_db = {}
 
 # Input values
-month_on_form = '12'
+month_on_form = '05'
 day_on_form = '15'
-year_on_form = '2021'
+year_on_form = '2022'
 use_previous_date = False
 
 def _ask_y_n(question, default='y'):
@@ -165,15 +166,12 @@ def create_validate_forms(create_form):
 def _show_pdf(pdf_filename):
     logging.debug('_show_pdf({}):'.format(pdf_filename))
 
-# jadfix Uncomment this
-'''
     if os.name == 'nt':
         _exec_shell_command('start {}'.format(pdf_filename))
     elif os.name == 'posix':
         _exec_shell_command('open {}'.format(pdf_filename))
     else:
         raise Exception('Unsupported Operating System')
-'''
 
 # jadfix: look here
 def _create_name_directory_db(root_dir):
