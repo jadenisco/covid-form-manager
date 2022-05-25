@@ -18,7 +18,7 @@ volunteers = {}
 # vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
 # vol_root_dir = 'z:/Developer/Windows/testroot'
 vol_root_dir = '//Cifs2/voldept$'
-#script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
+# script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
 script_dir = vol_root_dir + '/scripts/covid-form-manager'
 # forms_dir = vol_root_dir + '/.Volunteer Files/RICOH/jad'
 forms_dir = './forms'
@@ -36,6 +36,7 @@ tmp_filename = 'tmp.pdf'
 
 volunteer_dir_db = {}
 volunteer_name_dir_db = {}
+del_volunteers_db = {}
 
 # Input values
 month_on_form = '05'
@@ -117,17 +118,9 @@ def read_csv():
 def create_validate_forms(create_form):
     logging.debug("create_validate_forms({}): ".format(create_form))
 
-    # Get the root directory
-    rootdir = ''
-    for sr in testroot:
-        rootdir = os.path.join(rootdir, sr)
-
-    # Get the volunteer directory root
-    for vd in adult_volunteer_root:
-        rootdir = os.path.join(rootdir, vd)
-
     # For each volunteer get the name
-    logging.debug('Volunteer root dir: {}'.format(rootdir))
+    root_dir = adult_volunteer_root_dir
+    logging.debug('Volunteer root dir: {}'.format(root_dir))
     for v in volunteers.items():
         v_dir = '{} {}, {}'.format(v[1]['number'], v[1]['last name'], v[1]['first name'])
 
@@ -140,24 +133,24 @@ def create_validate_forms(create_form):
 
             # Get the month
             s_month = os.path.join(s_year, calendar.month_name[int(sds[0])])
-            s_monthwithroot = os.path.join(rootdir, s_month)
-            logging.debug("s_monthwithroot: {}".format(s_monthwithroot))
+            s_month_with_root = os.path.join(root_dir, s_month)
+            logging.debug("s_month_with_root: {}".format(s_month_with_root))
 
             # Create or validate the covid form
             fname = '{}.{}.{}.txt'.format(sds[0], sds[1], sds[2])
             fname_with_dir = os.path.join(s_month, fname)
-            fname_with_rootdir = os.path.join(rootdir, fname_with_dir)
+            fname_with_root_dir = os.path.join(root_dir, fname_with_dir)
 
             logging.debug('file: {}'.format(os.path.join(s_month, fname)))
 
             if create_form:
-                if not os.path.exists(s_monthwithroot):
-                    os.makedirs(s_monthwithroot)
-                if not os.path.isfile(fname_with_rootdir):
-                    with open(fname_with_rootdir, 'w') as f:
+                if not os.path.exists(s_month_with_root):
+                    os.makedirs(s_month_with_root)
+                if not os.path.isfile(fname_with_root_dir):
+                    with open(fname_with_root_dir, 'w') as f:
                         f.write('I am cleared to work today!\n')
             else:
-                if os.path.isfile(fname_with_rootdir):
+                if os.path.isfile(fname_with_root_dir):
                     print('The covid form EXISTS for {}'.format(fname_with_dir))
                 else:
                     print(colored('The covid form DOES NOT EXIST for {}'.format(fname_with_dir), 'red'))
@@ -225,7 +218,16 @@ def _create_directory_db(root_dir):
             vol_num = name.split(' ')[0]
             logging.debug("dir: {} {}".format(vol_num, namewithpath))
             if re.search(r'\d+', vol_num):
-                volunteer_dir_db[vol_num] = namewithpath
+                if vol_num not in volunteer_dir_db:
+                    if vol_num not in del_volunteers_db:
+                        volunteer_dir_db[vol_num] = namewithpath
+                    else:
+                        logging.error("Volunteer Number \"{}\" was not added, It's a Triplicate.".format(vol_num))
+                        del_volunteers_db[vol_num + '(2)'] = namewithpath
+                else:
+                    logging.error("Volunteer Number \"{}\" was not added, It's a duplicate, removing the entry.".format(vol_num))
+                    del volunteer_dir_db[vol_num]
+                    del_volunteers_db[vol_num] = namewithpath
 
 
 def _create_volunteer_directory_db():
@@ -425,9 +427,13 @@ def move(args):
                 # if ans == 'y':
                 _execute_move(src, dst)
             else:
-                print("The Directory for {} was not found.".format(src))
+                logging.error("The Directory for \"{}\" was not found.".format(os.path.basename(src)))
         else:
-            print("The file {} was not moved.".format(src))
+            print("\"{}\" was not moved.".format(src))
+
+    for d in del_volunteers_db:
+        logging.error("Duplicate Entry: {}.".format(os.path.basename(del_volunteers_db[d])))
+
 
 def _get_file():
     global forms_dir
@@ -592,17 +598,14 @@ def read_emails(args):
 
     _create_volunteer_name_directory_db()
 
-    scratchpath = ''
-    for sp in scratchdir:
-        scratchpath = os.path.join(scratchpath, sp)
-
-    for name in os.listdir(scratchpath):
-        filewithpath = os.path.join(scratchpath, name)
-        if filewithpath.find('.eml') == -1:
-            logging.debug("{} is not an email.".format(filewithpath))
+    fd = os.path.basename(forms_dir)
+    for name in os.listdir(fd):
+        file_with_path = os.path.join(fd, name)
+        if file_with_path.find('.eml') == -1:
+            logging.debug("{} is not an email.".format(file_with_path))
             continue
 
-        _read_emails(filewithpath)
+        _read_emails(file_with_path)
 
 
 def mgh_util(args):
