@@ -187,8 +187,6 @@ def _create_name_directory_db(root_dir):
                 db_entry_list.append(namewithpath)
                 volunteer_name_dir_db[key] = db_entry_list
 
-
-# jadfix: Look here 
 def _create_volunteer_name_directory_db():
     global adult_root_dir
     global junior_root_dir
@@ -223,12 +221,12 @@ def _create_directory_db(root_dir):
                         volunteer_dir_db[vol_num] = namewithpath
                     else:
                         logging.error("Volunteer Number \"{}\" was not added, It's a Triplicate.".format(vol_num))
-                        del_volunteers_db[vol_num + '(2)'] = namewithpath
+                        del_volunteers_db[vol_num + '(3)'] = namewithpath
                 else:
                     logging.error("Volunteer Number \"{}\" was not added, It's a duplicate, removing the entry.".format(vol_num))
-                    del volunteer_dir_db[vol_num]
                     del_volunteers_db[vol_num] = namewithpath
-
+                    del_volunteers_db[vol_num + '(2)'] = volunteer_dir_db[vol_num]
+                    del volunteer_dir_db[vol_num]
 
 def _create_volunteer_directory_db():
     global adult_volunteer_root_dir
@@ -432,7 +430,7 @@ def move(args):
             print("\"{}\" was not moved.".format(src))
 
     for d in del_volunteers_db:
-        logging.error("Duplicate Entry: {}.".format(os.path.basename(del_volunteers_db[d])))
+        logging.error("Duplicate Entry: {}.".format(del_volunteers_db[d]))
 
 
 def _get_file():
@@ -617,26 +615,7 @@ def mgh_util(args):
         logging.basicConfig(level=logging.DEBUG)
 
     logging.debug("mgh_util({})".format(args))
-
-    """
-    # Get the volunteer root directories
-    t_root = ''
-    for tr in testroot:
-        t_root = os.path.join(t_root, tr)
-
-    adult_root_dir = t_root
-    for avr in adult_volunteer_root:
-        adult_root_dir = os.path.join(adult_root_dir, avr)
-
-    junior_root_dir = t_root
-    for jvr in junior_volunteer_root:
-        junior_root_dir = os.path.join(junior_root_dir, jvr)
-
-    pet_root_dir = t_root
-    for pvr in pet_volunteer_root:
-        pet_root_dir = os.path.join(pet_root_dir, pvr)
-    """
-
+    
     if args.func:
         return args.func(args)
     else:
