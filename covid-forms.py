@@ -223,7 +223,7 @@ def _create_directory_db(root_dir):
                         logging.error("Volunteer Number \"{}\" was not added, It's a Triplicate.".format(vol_num))
                         del_volunteers_db[vol_num + '(3)'] = namewithpath
                 else:
-                    logging.error("Volunteer Number \"{}\" was not added, It's a duplicate, removing the entry.".format(vol_num))
+                    logging.debug("Volunteer Number \"{}\" was not added, It's a duplicate, removing the entry.".format(vol_num))
                     del_volunteers_db[vol_num] = namewithpath
                     del_volunteers_db[vol_num + '(2)'] = volunteer_dir_db[vol_num]
                     del volunteer_dir_db[vol_num]
@@ -418,8 +418,8 @@ def move(args):
 
             if vol_num in volunteer_dir_db.keys():
                 dst = volunteer_dir_db[vol_num]
-                print("Moving file from: {}".format(src))
-                print("To: {}".format(dst))
+                logging.debug("Moving file from: {}".format(src))
+                logging.debug("To: {}".format(dst))
                 # ans = input("Is this ok y/n [n]?  ")
                 # ans.lower()
                 # if ans == 'y':
@@ -430,7 +430,7 @@ def move(args):
             print("\"{}\" was not moved.".format(src))
 
     for d in del_volunteers_db:
-        logging.error("Duplicate Entry: {}.".format(del_volunteers_db[d]))
+        logging.debug("Duplicate Entry: {}.".format(del_volunteers_db[d]))
 
 
 def _get_file():
