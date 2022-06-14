@@ -430,7 +430,7 @@ def move(args):
             print("\"{}\" was not moved.".format(src))
 
     for d in del_volunteers_db:
-        logging.debug("Duplicate Entry: {}.".format(del_volunteers_db[d]))
+        print("Duplicate: {}.".format(del_volunteers_db[d]))
 
 
 def _get_file():
