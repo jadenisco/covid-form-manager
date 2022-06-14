@@ -223,7 +223,7 @@ def _create_directory_db(root_dir):
                         logging.error("Volunteer Number \"{}\" was not added, It's a Triplicate.".format(vol_num))
                         del_volunteers_db[vol_num + '(3)'] = namewithpath
                 else:
-                    logging.debug("Volunteer Number \"{}\" was not added, It's a duplicate, removing the entry.".format(vol_num))
+                    logging.error("Volunteer Number \"{}\" was not added, It's a duplicate, removing the entry.".format(vol_num))
                     del_volunteers_db[vol_num] = namewithpath
                     del_volunteers_db[vol_num + '(2)'] = volunteer_dir_db[vol_num]
                     del volunteer_dir_db[vol_num]
