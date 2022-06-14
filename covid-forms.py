@@ -57,6 +57,12 @@ def _ask_y_n(question, default='y'):
 
     return answer
 
+def _ask_month(question, default=month_on_form):
+
+
+
+    return ""
+
 def _exec_shell_command(command):
     logging.debug("_exec_shell_command({})".format(command))
 
