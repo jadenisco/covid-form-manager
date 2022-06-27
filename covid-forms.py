@@ -58,11 +58,30 @@ def _ask_y_n(question, default='y'):
 
     return answer
 
-def _ask_month(question, default=month_on_form):
+def _ask_month(default=month_on_form):
 
+    while True:
+        answer = input("What is the Month on the form [{}]?: ".format(default))
+        if answer == '':
+            answer = default
 
+        try:
+            m = int(answer)
+        except:
+            print("Please enter a valid number.")
+            continue
 
-    return ""
+        if m > 0 and m <= 12:
+            if m < 10:
+                month = "0{}".format(m)
+            else:
+                month = "{}".format(m)
+            break
+        else:
+            print("Please enter a number between 1 and 12.")
+            continue
+
+    return month
 
 def _exec_shell_command(command):
     logging.debug("_exec_shell_command({})".format(command))
@@ -180,18 +199,18 @@ def _create_name_directory_db(root_dir):
     logging.debug("_create_name_directory_db({})".format(root_dir))
 
     for name in os.listdir(root_dir):
-        namewithpath = os.path.join(root_dir, name)
-        if os.path.isdir(namewithpath):
+        name_with_path = os.path.join(root_dir, name)
+        if os.path.isdir(name_with_path):
             first_name = name.split(' ')[2]
             last_name = name.split(' ')[1].rstrip(',')
             vol_num = name.split(' ')[0]
             key = ''.join([first_name, last_name]).lower()
-            logging.debug("entry: {} {}".format(key, namewithpath))
+            logging.debug("entry: {} {}".format(key, name_with_path))
             if key in volunteer_name_dir_db.keys():
-                volunteer_name_dir_db[key].append(namewithpath)
+                volunteer_name_dir_db[key].append(name_with_path)
             else:
                 db_entry_list = []
-                db_entry_list.append(namewithpath)
+                db_entry_list.append(name_with_path)
                 volunteer_name_dir_db[key] = db_entry_list
 
 def _create_volunteer_name_directory_db():
@@ -217,21 +236,21 @@ def _create_directory_db(root_dir):
 
     rd = os.path.abspath(root_dir)
     for name in os.listdir(rd):
-        namewithpath = os.path.join(rd, name)
-        logging.debug("namewithpath: {}".format(namewithpath))
-        if os.path.isdir(namewithpath):
+        name_with_path = os.path.join(rd, name)
+        logging.debug("name_with_path: {}".format(name_with_path))
+        if os.path.isdir(name_with_path):
             vol_num = name.split(' ')[0]
-            logging.debug("dir: {} {}".format(vol_num, namewithpath))
+            logging.debug("dir: {} {}".format(vol_num, name_with_path))
             if re.search(r'\d+', vol_num):
                 if vol_num not in volunteer_dir_db:
                     if vol_num not in del_volunteers_db:
-                        volunteer_dir_db[vol_num] = namewithpath
+                        volunteer_dir_db[vol_num] = name_with_path
                     else:
                         logging.error("Volunteer Number \"{}\" was not added, It's a Triplicate.".format(vol_num))
-                        del_volunteers_db[vol_num + '(3)'] = namewithpath
+                        del_volunteers_db[vol_num + '(3)'] = name_with_path
                 else:
                     logging.error("Volunteer Number \"{}\" was not added, It's a duplicate, removing the entry.".format(vol_num))
-                    del_volunteers_db[vol_num] = namewithpath
+                    del_volunteers_db[vol_num] = name_with_path
                     del_volunteers_db[vol_num + '(2)'] = volunteer_dir_db[vol_num]
                     del volunteer_dir_db[vol_num]
 
@@ -280,9 +299,9 @@ def _get_page_filename(page_number):
 
     # Get the date to be used in the file name
     if use_previous_date == False:
-        answer = input("Enter the Month on the form [{}]: ".format(month_on_form))
+        month = _ask_month(month_on_form)
         if len(answer) != 0:
-            month_on_form = answer
+            month_on_form = month
 
         answer = input("Enter the Day on the form [{}]: ".format(day_on_form))
         if len(answer) != 0:
