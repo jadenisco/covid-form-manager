@@ -58,12 +58,12 @@ def _ask_y_n(question, default='y'):
 
     return answer
 
-def _ask_month(default=month_on_form):
+def _ask_value(question, min, max, default_value):
 
     while True:
-        answer = input("What is the Month on the form [{}]?: ".format(default))
+        answer = input("{} [{}]?: ".format(question, default_value))
         if answer == '':
-            answer = default
+            answer = default_value
 
         try:
             m = int(answer)
@@ -71,14 +71,14 @@ def _ask_month(default=month_on_form):
             print("Please enter a valid number.")
             continue
 
-        if m > 0 and m <= 12:
-            if m < 10:
+        if m in range(min, max):
+            if m in  range(1, 9):
                 month = "0{}".format(m)
             else:
                 month = "{}".format(m)
             break
         else:
-            print("Please enter a number between 1 and 12.")
+            print("Please enter a number between {} and {}.".format(min, max))
             continue
 
     return month
@@ -299,8 +299,8 @@ def _get_page_filename(page_number):
 
     # Get the date to be used in the file name
     if use_previous_date == False:
-        month = _ask_month(month_on_form)
-        if len(answer) != 0:
+        month = _ask_value("What is the month on the form {}", 1, 12, month_on_form)
+        if len(month) != 0:
             month_on_form = month
 
         answer = input("Enter the Day on the form [{}]: ".format(day_on_form))
