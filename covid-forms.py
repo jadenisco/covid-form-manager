@@ -16,13 +16,13 @@ from PyPDF2 import PdfFileReader, PdfFileWriter
 # number: , last name: , first name:, service dates[]:
 volunteers = {}
 
+vol_root_dir = '//Cifs2/voldept$'
 # vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
 # vol_root_dir = 'z:/Developer/Windows/testroot'
-vol_root_dir = '//Cifs2/voldept$'
-# script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
 script_dir = vol_root_dir + '/scripts/covid-form-manager'
-# forms_dir = vol_root_dir + '/.Volunteer Files/RICOH/jad'
+# script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
 forms_dir = './forms'
+# forms_dir = vol_root_dir + '/.Volunteer Files/RICOH/jad'
 
 # Volunteer root directories
 adult_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/ADULT MEDICAL AND NONMEDICAL'
@@ -48,7 +48,7 @@ use_previous_date = False
 def _ask_y_n(question, default='y'):
 
     while True:
-        answer = input("{} [{}]?: ".format(question, default))
+        answer = input("{} [{}]? ".format(question, default))
         if answer == '':
             answer = default
         answer = answer.lower()
@@ -61,27 +61,32 @@ def _ask_y_n(question, default='y'):
 def _ask_value(question, min, max, default_value):
 
     while True:
-        answer = input("{} [{}]?: ".format(question, default_value))
-        if answer == '':
-            answer = default_value
+        if default_value == None:
+            answer = input("{}? ".format(question))
+            if answer == '':
+                return ''
+        else:
+            answer = input("{} [{}]? ".format(question, default_value))
+            if answer == '':
+                answer = default_value
 
         try:
-            m = int(answer)
+            v = int(answer)
         except:
             print("Please enter a valid number.")
             continue
 
-        if m in range(min, max):
-            if m in  range(1, 9):
-                month = "0{}".format(m)
+        if v in range(min, max):
+            if v in  range(0, 9):
+                val = "0{}".format(v)
             else:
-                month = "{}".format(m)
+                val = "{}".format(v)
             break
         else:
             print("Please enter a number between {} and {}.".format(min, max))
             continue
 
-    return month
+    return val
 
 def _exec_shell_command(command):
     logging.debug("_exec_shell_command({})".format(command))
@@ -303,22 +308,22 @@ def _get_page_filename(page_number):
         if len(month) != 0:
             month_on_form = month
 
-        answer = input("Enter the Day on the form [{}]: ".format(day_on_form))
-        if len(answer) != 0:
-            day_on_form = answer
+        day = _ask_value("Enter the Day on the form", 1, 31, day_on_form)
+        if len(day) != 0:
+            day_on_form = day
 
-        answer = input("Enter the Year on the form [{}]: ".format(year_on_form))
-        if len(answer) != 0:
-            year_on_form = answer
+        year = _ask_value("Enter the Year on the form", 2020, 2030, year_on_form)
+        if len(year) != 0:
+            year_on_form = year
 
         answer = _ask_y_n("Do you want to use the same date for every page ", default='n')
         if answer.lower() == 'y':
             use_previous_date = True
 
     # Get the volunteer number
-    answer = input("Enter the volunteer number on the form: ")
-    if len(answer) != 0:
-        volunteer_number = answer
+    v_num = _ask_value("Enter the volunteer number on the form", 0, 99999, None)
+    if v_num != '':
+        volunteer_number = v_num
     else:
         volunteer_number = '({})'.format(page_number)
 
