@@ -40,7 +40,7 @@ volunteer_name_dir_db = {}
 del_volunteers_db = {}
 
 # Input values
-month_on_form = '05'
+month_on_form = '07'
 day_on_form = '15'
 year_on_form = '2022'
 use_previous_date = False
