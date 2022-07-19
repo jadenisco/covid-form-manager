@@ -4,11 +4,17 @@ import os
 import re
 import subprocess
 import calendar
+import time
 import email
 from email.header import decode_header
 import shutil
 from termcolor import colored
 from PyPDF2 import PdfFileReader, PdfFileWriter
+
+if os.name == 'nt': 
+    import pywintypes
+    import win32gui
+    WAIT_FOR_SHOW_SECS = 5
 
 # This is a change
 # The dictionary of Volunteers
@@ -16,9 +22,9 @@ from PyPDF2 import PdfFileReader, PdfFileWriter
 # number: , last name: , first name:, service dates[]:
 volunteers = {}
 
-vol_root_dir = '//Cifs2/voldept$'
+# vol_root_dir = '//Cifs2/voldept$'
 # vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
-# vol_root_dir = 'z:/Developer/Windows/testroot'
+vol_root_dir = 'z:/Developer/Windows/testroot'
 script_dir = vol_root_dir + '/scripts/covid-form-manager'
 # script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
 forms_dir = './forms'
@@ -191,7 +197,14 @@ def _show_pdf(pdf_filename):
     logging.debug('_show_pdf({}):'.format(pdf_filename))
 
     if os.name == 'nt':
+        fwin = win32gui.GetForegroundWindow()
         _exec_shell_command('start {}'.format(pdf_filename))
+        print("FWIN: {}".format(fwin))
+        time.sleep(10)
+        print("FWIN 2: {}".format(fwin))
+        # win32gui.SetActiveWindow(fwin)
+        win32gui.SetForegroundWindow(fwin)
+        print("FWIN 3: {}".format(fwin))
     elif os.name == 'posix':
         _exec_shell_command('open {}'.format(pdf_filename))
     else:
