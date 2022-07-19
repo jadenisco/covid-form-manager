@@ -22,9 +22,9 @@ if os.name == 'nt':
 # number: , last name: , first name:, service dates[]:
 volunteers = {}
 
-# vol_root_dir = '//Cifs2/voldept$'
+vol_root_dir = '//Cifs2/voldept$'
 # vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
-vol_root_dir = 'z:/Developer/Windows/testroot'
+# vol_root_dir = 'z:/Developer/Windows/testroot'
 script_dir = vol_root_dir + '/scripts/covid-form-manager'
 # script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
 forms_dir = './forms'
@@ -82,8 +82,8 @@ def _ask_value(question, min, max, default_value):
             print("Please enter a valid number.")
             continue
 
-        if v in range(min, max):
-            if v in  range(0, 9):
+        if v in range(min, max+1):
+            if v in  range(0, 9+1):
                 val = "0{}".format(v)
             else:
                 val = "{}".format(v)
@@ -317,11 +317,11 @@ def _get_page_filename(page_number):
 
     # Get the date to be used in the file name
     if use_previous_date == False:
-        month = _ask_value("What is the month on the form", 1, 13, month_on_form)
+        month = _ask_value("What is the month on the form", 1, 12, month_on_form)
         if len(month) != 0:
             month_on_form = month
 
-        day = _ask_value("Enter the Day on the form", 0, 32, day_on_form)
+        day = _ask_value("Enter the Day on the form", 0, 31, day_on_form)
         if len(day) != 0:
             day_on_form = day
 
