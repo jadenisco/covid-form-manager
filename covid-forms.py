@@ -304,11 +304,11 @@ def _get_page_filename(page_number):
 
     # Get the date to be used in the file name
     if use_previous_date == False:
-        month = _ask_value("What is the month on the form", 1, 12, month_on_form)
+        month = _ask_value("What is the month on the form", 1, 13, month_on_form)
         if len(month) != 0:
             month_on_form = month
 
-        day = _ask_value("Enter the Day on the form", 1, 31, day_on_form)
+        day = _ask_value("Enter the Day on the form", 0, 32, day_on_form)
         if len(day) != 0:
             day_on_form = day
 
