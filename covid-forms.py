@@ -43,7 +43,7 @@ tmp_filename = 'tmp.pdf'
 
 volunteer_dir_db = {}
 volunteer_name_dir_db = {}
-del_volunteers_db = {}
+dup_volunteers_db = {}
 
 # Input values
 month_on_form = '07'
@@ -260,17 +260,17 @@ def _create_directory_db(root_dir):
             vol_num = name.split(' ')[0]
             logging.debug("dir: {} {}".format(vol_num, name_with_path))
             if re.search(r'\d+', vol_num):
-                if vol_num not in volunteer_dir_db:
-                    if vol_num not in del_volunteers_db:
-                        volunteer_dir_db[vol_num] = name_with_path
-                    else:
-                        logging.error("Volunteer Number \"{}\" was not added, It's a Triplicate.".format(vol_num))
-                        del_volunteers_db[vol_num + '(3)'] = name_with_path
+                # We only add to the db if it is not in the db and is not a dup
+                if vol_num not in volunteer_dir_db and vol_num not in dup_volunteers_db:
+                    volunteer_dir_db[vol_num] = name_with_path
                 else:
-                    logging.error("Volunteer Number \"{}\" was not added, It's a duplicate, removing the entry.".format(vol_num))
-                    del_volunteers_db[vol_num] = name_with_path
-                    del_volunteers_db[vol_num + '(2)'] = volunteer_dir_db[vol_num]
-                    del volunteer_dir_db[vol_num]
+                    logging.debug("Volunteer Number \"{}\" Is a duplicate.".format(vol_num))
+                    # If the vol number is in the db, it is the first duplicate. 
+                    if vol_num in volunteer_dir_db:
+                        dup_volunteers_db[vol_num] = []
+                        dup_volunteers_db[vol_num].append(volunteer_dir_db[vol_num])
+                        del volunteer_dir_db[vol_num]
+                    dup_volunteers_db[vol_num].append(name_with_path)
 
 def _create_volunteer_directory_db():
     global adult_volunteer_root_dir
@@ -469,13 +469,13 @@ def move(args):
                 # if ans == 'y':
                 _execute_move(src, dst)
             else:
-                logging.error("The Directory for \"{}\" was not found.".format(os.path.basename(src)))
+                print("The Entry for \"{}\" was not found.".format(os.path.basename(src)))
+                if vol_num in dup_volunteers_db:
+                    print("DUPLICATES:")
+                    for dup in dup_volunteers_db[vol_num]:
+                        print("    {}".format(dup))
         else:
             print("\"{}\" was not moved.".format(src))
-
-    for d in del_volunteers_db:
-        print("Duplicate: {}.".format(del_volunteers_db[d]))
-
 
 def _get_file():
     global forms_dir
