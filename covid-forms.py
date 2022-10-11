@@ -11,10 +11,10 @@ import shutil
 from termcolor import colored
 from PyPDF2 import PdfFileReader, PdfFileWriter
 
-if os.name == 'nt': 
-    import pywintypes
-    import win32gui
-    WAIT_FOR_SHOW_SECS = 5
+#if os.name == 'nt': 
+#    import pywintypes
+#    import win32gui
+#    WAIT_FOR_SHOW_SECS = 5
 
 # This is a change
 # The dictionary of Volunteers
@@ -197,14 +197,14 @@ def _show_pdf(pdf_filename):
     logging.debug('_show_pdf({}):'.format(pdf_filename))
 
     if os.name == 'nt':
-        fwin = win32gui.GetForegroundWindow()
+        # fwin = win32gui.GetForegroundWindow()
         _exec_shell_command('start {}'.format(pdf_filename))
-        print("FWIN: {}".format(fwin))
-        time.sleep(10)
-        print("FWIN 2: {}".format(fwin))
+        # print("FWIN: {}".format(fwin))
+        # time.sleep(10)
+        # print("FWIN 2: {}".format(fwin))
         # win32gui.SetActiveWindow(fwin)
-        win32gui.SetForegroundWindow(fwin)
-        print("FWIN 3: {}".format(fwin))
+        # win32gui.SetForegroundWindow(fwin)
+        # print("FWIN 3: {}".format(fwin))
     elif os.name == 'posix':
         _exec_shell_command('open {}'.format(pdf_filename))
     else:
@@ -456,7 +456,7 @@ def move(args):
 
         logging.debug("src: {}".format(src))
 
-        if re.search(r'CLEARED FOR WORK (''|[0-1])[1-9]_(''|[0-3])[0-9]_20\d{2}-\d+', src):
+        if re.search(r'CLEARED FOR WORK (''|[0-1])[0-9]_(''|[0-3])[0-9]_20\d{2}-\d+', src):
             vol_num = re.search(r'-\d+.pdf', src).group().lstrip('-').rstrip('.pdf')
             logging.debug("Vol Number: {}".format(vol_num))
 
