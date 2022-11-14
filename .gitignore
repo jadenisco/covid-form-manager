@@ -1,5 +1,7 @@
 # Ignore some local files
+emails/
 forms/
+forms-01/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

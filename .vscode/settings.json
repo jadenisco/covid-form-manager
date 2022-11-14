@@ -1,6 +1,8 @@
 {
     "cSpell.words": [
         "Cifs",
+        "fwin",
+        "pywintypes",
         "scratchroot",
         "termcolor",
         "testroot",

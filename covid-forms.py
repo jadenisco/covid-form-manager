@@ -5,6 +5,7 @@ import re
 import subprocess
 import calendar
 import time
+from msg_parser import MsOxMessage
 import email
 from email.header import decode_header
 import shutil
@@ -29,6 +30,8 @@ script_dir = vol_root_dir + '/scripts/covid-form-manager'
 # script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
 forms_dir = './forms'
 # forms_dir = vol_root_dir + '/.Volunteer Files/RICOH/jad'
+emails_dir = './emails'
+# emails_dir = './forms-01'
 
 # Volunteer root directories
 adult_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/ADULT MEDICAL AND NONMEDICAL'
@@ -240,9 +243,7 @@ def _create_volunteer_name_directory_db():
 
     volunteer_name_dir_db = {}
     
-    _create_name_directory_db(adult_root_dir)
-    _create_name_directory_db(junior_root_dir)
-
+    _create_name_directory_db(adult_volunteer_root_dir)
 
 def _create_directory_db(root_dir):
     global volunteer_dir_db
@@ -610,8 +611,8 @@ def _move_email(src, clear_date, name):
         print(colored('A directory is not found for {}'.format(key), 'red'))
 
 
-def _read_emails(filename):
-    logging.debug("read_emails({})".format(filename))
+def _read_email_eml(filename):
+    logging.debug("_read_email_eml({})".format(filename))
 
     with open(filename, 'rb') as f:
         msg = email.message_from_bytes(f.read())
@@ -635,20 +636,55 @@ def _read_emails(filename):
         _move_email(filename, clear_date, name)
  
     
+def _read_email_msg(filename):
+    logging.debug("read_email_msg({})".format(filename))
+
+    msg = MsOxMessage(filename)
+    cleared = re.findall(r'CLEARED FOR WORK TODAY', msg.body)
+
+
+    date_time_name = re.findall(r'\d+/\d+/\d+ \d+:\d+:\d+[\r|\n]+[A-Z|a-z| ]+[\r|\n]+', msg.body)
+    if len(date_time_name) == 0:
+        print("Date, Time and Name was not found!")
+        return(None)
+
+    date_time_name = date_time_name[0]
+    date = re.findall(r'\d+/\d+/\d+', date_time_name)[0].replace('/', '-')
+    name = re.findall(r'[\r|\n]+[A-Z|a-z| ]+[\r|\n]+', date_time_name)[0].strip().replace(' ', '_')
+    new_filename = "{}-{}".format(name, date)
+    print('+++++++++++++++++++++++++++++++++++')
+    print("Date Time Name: {}".format(date_time_name))
+    print("Date: {}".format(date))
+    print("Name: {}".format(name))
+    print("New Filename: {}".format(new_filename))
+    print('+++++++++++++++++++++++++++++++++++')
+
+#    print("Time: {}", rf[1])
+#    print(msg.body)
+#    print('-----')
+
+
+    '''
+    if clear_date:
+        _move_email(filename, clear_date, name)
+    '''
+
+
 def read_emails(args):
     logging.debug("email({})".format(args))
 
     _create_volunteer_name_directory_db()
 
-    fd = os.path.basename(forms_dir)
+    fd = os.path.basename(emails_dir)
     for name in os.listdir(fd):
         file_with_path = os.path.join(fd, name)
-        if file_with_path.find('.eml') == -1:
+        if file_with_path.find('.eml') != -1:
+            _read_email_eml(file_with_path)
+        elif file_with_path.find('.msg'):
+            _read_email_msg(file_with_path)
+        else:
             logging.debug("{} is not an email.".format(file_with_path))
             continue
-
-        _read_emails(file_with_path)
-
 
 def mgh_util(args):
     global adult_root_dir
