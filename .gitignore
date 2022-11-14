@@ -1,5 +1,6 @@
 # Ignore some local files
 emails/
+emails-01/
 forms/
 forms-01/
 

@@ -589,7 +589,7 @@ def _extract_name_date(msg):
     return None, None
 
 def _move_email(src, clear_date, name):
-    global createdfileroot
+    global created_file_root
     global volunteer_name_dir_db
 
     logging.debug("_move_email({}, {}, {})".format(src, clear_date, name))
@@ -601,12 +601,11 @@ def _move_email(src, clear_date, name):
             # Rename the file
             dst = volunteer_name_dir_db[key][0]
             vol_num = os.path.basename(dst).split(' ')[0]
-            newfile = "{} {}-{}.eml".format(createdfileroot, clear_date.replace('/', '_'), vol_num)
-            newfilewithpath = os.path.join(os.path.dirname(src), newfile)
-            if src != newfilewithpath:
-                os.rename(src, newfilewithpath)
-            _execute_move(newfilewithpath, dst)
-
+            new_file = "{} {}-{}.eml".format(created_file_root, clear_date.replace('/', '_'), vol_num)
+            new_file_with_path = os.path.join(os.path.dirname(src), new_file)
+            if src != new_file_with_path:
+                os.rename(src, new_file_with_path)
+            _execute_move(new_file_with_path, dst)
     else:
         print(colored('A directory is not found for {}'.format(key), 'red'))
 
@@ -640,51 +639,50 @@ def _read_email_msg(filename):
     logging.debug("read_email_msg({})".format(filename))
 
     msg = MsOxMessage(filename)
+    # jadfix Figure out cleared
     cleared = re.findall(r'CLEARED FOR WORK TODAY', msg.body)
-
 
     date_time_name = re.findall(r'\d+/\d+/\d+ \d+:\d+:\d+[\r|\n]+[A-Z|a-z| ]+[\r|\n]+', msg.body)
     if len(date_time_name) == 0:
-        print("Date, Time and Name was not found!")
-        return(None)
+        logging.error("Date, Time and Name was not found for {}!".format(filename))
+        return None, None
 
     date_time_name = date_time_name[0]
     date = re.findall(r'\d+/\d+/\d+', date_time_name)[0].replace('/', '-')
     name = re.findall(r'[\r|\n]+[A-Z|a-z| ]+[\r|\n]+', date_time_name)[0].strip().replace(' ', '_')
-    new_filename = "{}-{}".format(name, date)
-    print('+++++++++++++++++++++++++++++++++++')
-    print("Date Time Name: {}".format(date_time_name))
-    print("Date: {}".format(date))
-    print("Name: {}".format(name))
-    print("New Filename: {}".format(new_filename))
-    print('+++++++++++++++++++++++++++++++++++')
 
-#    print("Time: {}", rf[1])
-#    print(msg.body)
-#    print('-----')
-
-
-    '''
-    if clear_date:
-        _move_email(filename, clear_date, name)
-    '''
+    return name, date
 
 
 def read_emails(args):
     logging.debug("email({})".format(args))
 
-    _create_volunteer_name_directory_db()
+#    _create_volunteer_name_directory_db()
 
     fd = os.path.basename(emails_dir)
-    for name in os.listdir(fd):
-        file_with_path = os.path.join(fd, name)
-        if file_with_path.find('.eml') != -1:
-            _read_email_eml(file_with_path)
-        elif file_with_path.find('.msg'):
-            _read_email_msg(file_with_path)
-        else:
+    for filename in os.listdir(fd):
+        file_with_path = os.path.join(fd, filename)
+        if file_with_path.find('.msg') == -1:
             logging.debug("{} is not an email.".format(file_with_path))
             continue
+
+        name, date = _read_email_msg(file_with_path)
+        if name is None:
+            print('+++++++++++++++++++++++++++++++++++')
+            continue
+
+        new_filename = "{}-{}".format(date, name)
+        print('+++++++++++++++++++++++++++++++++++')
+        print("Enter Volgistics information for:")
+        print("   Date: {}".format(date))
+        print("   Name: {}".format(name))
+        answer = 'n'
+        while answer.lower() != 'y':
+            answer = _ask_y_n("Have you entered the information into Volgistics? ", default='y')
+
+        print("The new filename will be: {}".format(new_filename))
+        print('+++++++++++++++++++++++++++++++++++')
+
 
 def mgh_util(args):
     global adult_root_dir
