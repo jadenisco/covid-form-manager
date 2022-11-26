@@ -5,6 +5,7 @@ import re
 import subprocess
 import calendar
 import time
+import glob
 from msg_parser import MsOxMessage
 import email
 from email.header import decode_header
@@ -38,6 +39,8 @@ adult_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/ADULT MEDICAL AND N
 junior_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/JUNIOR MEDICAL AND NONMEDICAL/Active JR Volunteers'
 # pet_volunteer_root_dir = None
 pet_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/Pet Therapy'
+
+dirs_to_search = [adult_volunteer_root_dir, junior_volunteer_root_dir, pet_volunteer_root_dir]
 
 # testroot = [os.sep, 'Cifs2', 'voldept$']
 
@@ -639,25 +642,71 @@ def _read_email_msg(filename):
     logging.debug("read_email_msg({})".format(filename))
 
     msg = MsOxMessage(filename)
-    # jadfix Figure out cleared
-    cleared = re.findall(r'CLEARED FOR WORK TODAY', msg.body)
-
     date_time_name = re.findall(r'\d+/\d+/\d+ \d+:\d+:\d+[\r|\n]+[A-Z|a-z| ]+[\r|\n]+', msg.body)
     if len(date_time_name) == 0:
         logging.error("Date, Time and Name was not found for {}!".format(filename))
         return None, None
 
     date_time_name = date_time_name[0]
-    date = re.findall(r'\d+/\d+/\d+', date_time_name)[0].replace('/', '-')
-    name = re.findall(r'[\r|\n]+[A-Z|a-z| ]+[\r|\n]+', date_time_name)[0].strip().replace(' ', '_')
+    date = re.findall(r'\d+/\d+/\d+', date_time_name)[0].replace('/', '_')
+    name = re.findall(r'[\r|\n]+[A-Z|a-z| ]+[\r|\n]+', date_time_name)[0].strip()
 
     return name, date
 
+def move_message(directory, date):
+    logging.debug("move_message({}, {})".format(directory, date))
+
+
+
+def _find_directories(name):
+    global dirs_to_search
+    directories_found = []
+
+    logging.debug("_find_directory({})".format(name))
+
+    nm = name.split()
+    if len(nm) < 2:
+        logging.error("Invalid Name: {}".format(name))
+        return None
+
+    last_name = nm[len(nm)-1]
+    first_name = nm[0]
+
+    # First look for an exact match
+    for dir in dirs_to_search:
+        if dir:
+            directories_found +=  glob.glob(dir + '/**/*{}*{}'.format(last_name, first_name), recursive = True)
+
+    if len(directories_found) == 1:
+        print("There is an exact match!")
+    else:
+        # Look for a last name match
+        for dir in dirs_to_search:
+            if dir:
+                directories_found +=  glob.glob(dir + '/**/*{}*'.format(last_name), recursive = True)
+
+    return directories_found
+
+
+def find_directories(args):
+    logging.debug("find_dir({})".format(args))
+
+    directories = _find_directories("John DeNisco")
+    print(directories)
+
+
+def _move_msg(directories, filename):
+    logging.debug("move_msgs(...)")
+
+    for dir in directories:
+        answer = _ask_y_n("Do you want to move the file {} to {}? ".format(filename, dir), default='n')
+        if answer.lower() == 'y':
+            _execute_move(filename, dir)
+            return
+
 
 def read_emails(args):
-    logging.debug("email({})".format(args))
-
-#    _create_volunteer_name_directory_db()
+    logging.debug("read_emails({})".format(args))
 
     fd = os.path.basename(emails_dir)
     for filename in os.listdir(fd):
@@ -671,7 +720,8 @@ def read_emails(args):
             print('+++++++++++++++++++++++++++++++++++')
             continue
 
-        new_filename = "{}-{}".format(date, name)
+        new_filename = "{}-{}.msg".format(date, name)
+        dst = os.path.join(fd, new_filename)
         print('+++++++++++++++++++++++++++++++++++')
         print("Enter Volgistics information for:")
         print("   Date: {}".format(date))
@@ -680,7 +730,12 @@ def read_emails(args):
         while answer.lower() != 'y':
             answer = _ask_y_n("Have you entered the information into Volgistics? ", default='y')
 
-        print("The new filename will be: {}".format(new_filename))
+        print("Rename the file from {} to {}".format(file_with_path, dst))
+        if not os.path.exists(dst):
+            os.rename(file_with_path, dst)
+
+        directories = _find_directories("John DeNisco")
+        _move_msg(directories, dst)
         print('+++++++++++++++++++++++++++++++++++')
 
 
@@ -721,6 +776,9 @@ if __name__ == '__main__':
 
     sm_parser = sub_parsers.add_parser('read-emails', help='read emails')
     sm_parser.set_defaults(func=read_emails)
+
+    sm_parser = sub_parsers.add_parser('find-dir', help='find dir')
+    sm_parser.set_defaults(func=find_directories)
 
     mv_parser = sub_parsers.add_parser('move', help='Move the files')
     mv_parser.set_defaults(func=move)

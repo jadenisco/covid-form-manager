@@ -1,8 +1,10 @@
 # Ignore some local files
 emails/
 emails-01/
+emails-02/
 forms/
 forms-01/
+tmp/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

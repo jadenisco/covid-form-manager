@@ -4,6 +4,7 @@
         "fwin",
         "pywintypes",
         "scratchroot",
+        "spname",
         "termcolor",
         "testroot",
         "voldept",
