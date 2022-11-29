@@ -10,7 +10,6 @@ from msg_parser import MsOxMessage
 import email
 from email.header import decode_header
 import shutil
-from termcolor import colored
 from PyPDF2 import PdfFileReader, PdfFileWriter
 
 #if os.name == 'nt': 
@@ -734,8 +733,8 @@ def read_emails(args):
         if not os.path.exists(dst):
             os.rename(file_with_path, dst)
 
-        directories = _find_directories("John DeNisco")
-        _move_msg(directories, dst)
+        # directories = _find_directories("John DeNisco")
+        # _move_msg(directories, dst)
         print('+++++++++++++++++++++++++++++++++++')
 
 
