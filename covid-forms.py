@@ -195,7 +195,7 @@ def create_validate_forms(create_form):
                 if os.path.isfile(fname_with_root_dir):
                     print('The covid form EXISTS for {}'.format(fname_with_dir))
                 else:
-                    print(colored('The covid form DOES NOT EXIST for {}'.format(fname_with_dir), 'red'))
+                    logging.error('The covid form DOES NOT EXIST for {}'.format(fname_with_dir))
 
 
 def _show_pdf(pdf_filename):
@@ -598,7 +598,7 @@ def _move_email(src, clear_date, name):
     key = name.replace(' ', '').lower()
     if key in volunteer_name_dir_db.keys():
         if len(volunteer_name_dir_db[key]) > 1:
-            print(colored('There is more than one directory for {}: {}'.format(key, volunteer_name_dir_db[key]), 'red'))
+            logging.error('There is more than one directory for {}: {}'.format(key, volunteer_name_dir_db[key]))
         else:
             # Rename the file
             dst = volunteer_name_dir_db[key][0]
@@ -609,7 +609,7 @@ def _move_email(src, clear_date, name):
                 os.rename(src, new_file_with_path)
             _execute_move(new_file_with_path, dst)
     else:
-        print(colored('A directory is not found for {}'.format(key), 'red'))
+        logging.error('A directory is not found for {}'.format(key))
 
 
 def _read_email_eml(filename):
