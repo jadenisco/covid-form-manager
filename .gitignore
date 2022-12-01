@@ -5,6 +5,7 @@ emails-02/
 forms/
 forms-01/
 tmp/
+name_db.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

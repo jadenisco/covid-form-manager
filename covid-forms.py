@@ -4,6 +4,7 @@ import os
 import re
 import subprocess
 import calendar
+import json
 import time
 import glob
 from msg_parser import MsOxMessage
@@ -40,6 +41,7 @@ junior_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/JUNIOR MEDICAL AND
 pet_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/Pet Therapy'
 
 dirs_to_search = [adult_volunteer_root_dir, junior_volunteer_root_dir, pet_volunteer_root_dir]
+name_db_filename = script_dir + '/name_db.json'
 
 # testroot = [os.sep, 'Cifs2', 'voldept$']
 
@@ -47,7 +49,7 @@ created_file_root = 'COVID 19 Day Pass - CLEARED FOR WORK'
 tmp_filename = 'tmp.pdf'
 
 volunteer_dir_db = {}
-volunteer_name_dir_db = {}
+volunteer_name_db = {}
 dup_volunteers_db = {}
 
 # Input values
@@ -236,16 +238,45 @@ def _create_name_directory_db(root_dir):
                 db_entry_list.append(name_with_path)
                 volunteer_name_dir_db[key] = db_entry_list
 
-def _create_volunteer_name_directory_db():
+def _create_name_db():
+    global dirs_to_search
     global adult_root_dir
     global junior_root_dir
-    global volunteer_name_dir_db
+    global volunteer_name_db
 
-    logging.debug("_create_volunteer_name_directory_db()")
+    logging.debug("_create_volunteer_name_db()")
+    print("Creating the directory database, this may take a few minutes.....")
 
-    volunteer_name_dir_db = {}
+    volunteer_name_db = {}
     
-    _create_name_directory_db(adult_volunteer_root_dir)
+    for dir in dirs_to_search:
+        if dir == None:
+            continue
+
+        print("DIR: {}".format(dir))
+        for name in os.listdir(dir):
+            nm = name.split(',')
+            if len(nm) != 2:
+                logging.error("The format is invalid for: {}".format(name))
+                continue
+
+            last_name = ''.join(nm[0].split(' ')[1:])
+            first_name = ''.join(nm[1:])
+            key = (first_name + last_name).replace(' ', '').lower()
+            print("KEY: {}".format(key))
+            if key in volunteer_name_db:
+                entry = volunteer_name_db[key]
+                print("Previous Entry: {}".format(entry))
+                volunteer_name_db[key].append(os.path.join(dir, name))
+            else:
+                entry = []
+                entry.append(os.path.join(dir, name))
+                volunteer_name_db[key] = entry
+                print("New Entry: {}".format(entry))
+
+    with open(name_db_filename, 'w') as f:
+        json.dump(volunteer_name_db, f)
+
 
 def _create_directory_db(root_dir):
     global volunteer_dir_db
@@ -705,8 +736,20 @@ def _move_msg(directories, filename):
 
 
 def read_emails(args):
+    global volunteer_name_db
+
     logging.debug("read_emails({})".format(args))
 
+    if os.path.exists(name_db_filename):
+        answer = _ask_y_n("The name DB file exists do you want to overwrite it? ", default='n')
+        if answer == 'y':
+            _create_name_db()
+            # print(json.dumps(volunteer_name_db, indent=2))
+        else:
+            with open(name_db_filename, 'r') as fin:
+                volunteer_name_db = json.load(fin)
+            # print(json.dumps(volunteer_name_db, indent=2))
+    
     fd = os.path.basename(emails_dir)
     for filename in os.listdir(fd):
         file_with_path = os.path.join(fd, filename)
@@ -720,7 +763,7 @@ def read_emails(args):
             continue
 
         new_filename = "{}-{}.msg".format(date, name)
-        dst = os.path.join(fd, new_filename)
+        new_file_with_path = os.path.join(fd, new_filename)
         print('+++++++++++++++++++++++++++++++++++')
         print("Enter Volgistics information for:")
         print("   Date: {}".format(date))
@@ -729,12 +772,14 @@ def read_emails(args):
         while answer.lower() != 'y':
             answer = _ask_y_n("Have you entered the information into Volgistics? ", default='y')
 
-        print("Rename the file from {} to {}".format(file_with_path, dst))
-        if not os.path.exists(dst):
-            os.rename(file_with_path, dst)
+        print("Rename the file from {} to {}".format(file_with_path, new_file_with_path))
+        if not os.path.exists(new_file_with_path):
+            os.rename(file_with_path, new_file_with_path)
 
-        # directories = _find_directories("John DeNisco")
-        # _move_msg(directories, dst)
+        key = name.replace(' ', '').lower()
+        if key in volunteer_name_db:
+            directories = volunteer_name_db[key]
+            _move_msg(directories, new_file_with_path)
         print('+++++++++++++++++++++++++++++++++++')
 
 
