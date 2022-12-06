@@ -27,7 +27,7 @@ volunteers = {}
 vol_root_dir = '//Cifs2/voldept$'
 # vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
 # vol_root_dir = 'z:/Developer/Windows/testroot'
-script_dir = vol_root_dir + '/scripts/covid-form-manager'
+script_dir = vol_root_dir + '/scripts/cfm-test/covid-form-manager'
 # script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
 forms_dir = './forms'
 # forms_dir = vol_root_dir + '/.Volunteer Files/RICOH/jad'
@@ -729,7 +729,7 @@ def _move_msg(directories, filename):
     logging.debug("move_msgs(...)")
 
     for dir in directories:
-        answer = _ask_y_n("Do you want to move the file {} to {}? ".format(filename, dir), default='n')
+        answer = _ask_y_n("Do you want to move the file {} to {}? ".format(filename, dir), default='y')
         if answer.lower() == 'y':
             _execute_move(filename, dir)
             return
@@ -749,6 +749,8 @@ def read_emails(args):
             with open(name_db_filename, 'r') as fin:
                 volunteer_name_db = json.load(fin)
             # print(json.dumps(volunteer_name_db, indent=2))
+    else:
+        _create_name_db()
     
     fd = os.path.basename(emails_dir)
     for filename in os.listdir(fd):
