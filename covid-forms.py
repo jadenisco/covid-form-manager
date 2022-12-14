@@ -42,15 +42,18 @@ pet_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/Pet Therapy'
 
 dirs_to_search = [adult_volunteer_root_dir, junior_volunteer_root_dir, pet_volunteer_root_dir]
 name_db_filename = script_dir + '/name_db.json'
+num_db_filename = script_dir + '/num_db.json'
+
+dry_run = False
+tmp_filename = 'tmp.pdf'
 
 # testroot = [os.sep, 'Cifs2', 'voldept$']
 
-created_file_root = 'COVID 19 Day Pass - CLEARED FOR WORK'
-tmp_filename = 'tmp.pdf'
-
 volunteer_dir_db = {}
-volunteer_name_db = {}
 dup_volunteers_db = {}
+
+volunteer_name_db = {}
+volunteer_num_db = {}
 
 # Input values
 month_on_form = '07'
@@ -238,17 +241,17 @@ def _create_name_directory_db(root_dir):
                 db_entry_list.append(name_with_path)
                 volunteer_name_dir_db[key] = db_entry_list
 
-def _create_name_db():
+def _create_db():
     global dirs_to_search
-    global adult_root_dir
-    global junior_root_dir
     global volunteer_name_db
+    global volunteer_num_db
 
-    logging.debug("_create_volunteer_name_db()")
-    print("Creating the directory database, this may take a few minutes.....")
+    logging.debug("_create_name_db()")
+    print("Creating the databases, this may take a few minutes.....")
 
-    volunteer_name_db = {}
-    
+    volunteer_name_db = {} 
+    volunteer_num_db = {}
+   
     for dir in dirs_to_search:
         if dir == None:
             continue
@@ -262,20 +265,34 @@ def _create_name_db():
 
             last_name = ''.join(nm[0].split(' ')[1:])
             first_name = ''.join(nm[1:])
-            key = (first_name + last_name).replace(' ', '').lower()
-            print("KEY: {}".format(key))
-            if key in volunteer_name_db:
-                entry = volunteer_name_db[key]
+            vol_num = nm[0].split(' ')[0]
+            name_key = (first_name + last_name).replace(' ', '').lower()
+            print("NAME KEY: {}".format(name_key))
+            print("NUMBER KEY: {}".format(vol_num))
+            if name_key in volunteer_name_db:
+                entry = volunteer_name_db[name_key]
                 print("Previous Entry: {}".format(entry))
-                volunteer_name_db[key].append(os.path.join(dir, name))
+                volunteer_name_db[name_key].append(os.path.join(dir, name))
             else:
                 entry = []
                 entry.append(os.path.join(dir, name))
-                volunteer_name_db[key] = entry
-                print("New Entry: {}".format(entry))
+                volunteer_name_db[name_key] = entry
+                print("New Name Entry: {}".format(entry))
+
+            if vol_num in volunteer_num_db:
+                entry = volunteer_num_db[vol_num]
+                print("Previous Num Entry: {}".format(entry))
+                volunteer_num_db[vol_num].append(os.path.join(dir, name))
+            else:
+                entry = []
+                entry.append(os.path.join(dir, name))
+                volunteer_num_db[vol_num] = entry
+                print("New Num Entry: {}".format(entry))
 
     with open(name_db_filename, 'w') as f:
         json.dump(volunteer_name_db, f)
+    with open(num_db_filename, 'w') as f:
+        json.dump(volunteer_num_db, f)
 
 
 def _create_directory_db(root_dir):
@@ -374,7 +391,7 @@ def _get_page_filename(page_number):
     else:
         volunteer_number = '({})'.format(page_number)
 
-    page_filename = '{} {}_{}_{}-{}.pdf'.format(created_file_root, month_on_form, day_on_form, year_on_form, volunteer_number)
+    page_filename = '{}_{}_{}-{}.pdf'.format(month_on_form, day_on_form, year_on_form, volunteer_number)
     page_filename = os.path.join(os.path.abspath(forms_dir), page_filename)
   
     return page_filename, volunteer_number
@@ -490,7 +507,7 @@ def move(args):
 
         logging.debug("src: {}".format(src))
 
-        if re.search(r'CLEARED FOR WORK (''|[0-1])[0-9]_(''|[0-3])[0-9]_20\d{2}-\d+', src):
+        if re.search(r'(''|[0-1])[0-9]_(''|[0-3])[0-9]_20\d{2}-\d+', src):
             vol_num = re.search(r'-\d+.pdf', src).group().lstrip('-').rstrip('.pdf')
             logging.debug("Vol Number: {}".format(vol_num))
 
@@ -501,7 +518,8 @@ def move(args):
                 # ans = input("Is this ok y/n [n]?  ")
                 # ans.lower()
                 # if ans == 'y':
-                _execute_move(src, dst)
+                if not dry_run:
+                    _execute_move(src, dst)
             else:
                 print("The Entry for \"{}\" was not found.".format(os.path.basename(src)))
                 if vol_num in dup_volunteers_db:
@@ -741,9 +759,9 @@ def read_emails(args):
     logging.debug("read_emails({})".format(args))
 
     if os.path.exists(name_db_filename):
-        answer = _ask_y_n("The name DB file exists do you want to overwrite it? ", default='n')
+        answer = _ask_y_n("The DB files exists do you want to overwrite them? ", default='n')
         if answer == 'y':
-            _create_name_db()
+            _create_db()
             # print(json.dumps(volunteer_name_db, indent=2))
         else:
             with open(name_db_filename, 'r') as fin:
@@ -787,9 +805,13 @@ def mgh_util(args):
     global adult_root_dir
     global junior_root_dir
     global pet_root_dir
+    global dry_run
 
     if args.debug:
         logging.basicConfig(level=logging.DEBUG)
+
+    if args.dry_run:
+        dry_run = True
 
     logging.debug("mgh_util({})".format(args))
     
@@ -805,6 +827,7 @@ if __name__ == '__main__':
         description='These utilities can be used by the MGH volunteer department.',
         epilog='See "%(prog)s help COMMAND" for help on a specific command.')
     main_parser.add_argument('--debug', '-d', action='count', help='Print debug output')
+    main_parser.add_argument('--dry-run', '-dr', action='count', help='Print debug output')
     main_parser.add_argument('--create', '-c', action='count', help='Create a directory if needed')
     sub_parsers = main_parser.add_subparsers()
 
