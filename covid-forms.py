@@ -768,7 +768,7 @@ def read_emails(args):
                 volunteer_name_db = json.load(fin)
             # print(json.dumps(volunteer_name_db, indent=2))
     else:
-        _create_name_db()
+        _create_db()
     
     fd = os.path.basename(emails_dir)
     for filename in os.listdir(fd):
