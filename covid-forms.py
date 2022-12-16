@@ -43,6 +43,7 @@ pet_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/Pet Therapy'
 dirs_to_search = [adult_volunteer_root_dir, junior_volunteer_root_dir, pet_volunteer_root_dir]
 name_db_filename = script_dir + '/name_db.json'
 num_db_filename = script_dir + '/num_db.json'
+err_db_filename = script_dir + '/err_db.json'
 
 dry_run = False
 tmp_filename = 'tmp.pdf'
@@ -54,6 +55,7 @@ dup_volunteers_db = {}
 
 volunteer_name_db = {}
 volunteer_num_db = {}
+err_db = []
 
 # Input values
 month_on_form = '07'
@@ -453,7 +455,10 @@ def create_directories(args):
 
 
 def _execute_move(src, dst):
-    logging.debug("_execute_move({}, {})".format(src, dst))
+    logging.debug("_execute_move({}, {})".format(os.path.basename(src), dst))
+
+    if dry_run:
+        return
 
     if not os.path.isdir(dst):
         print("ERROR: The Directory {} does NOT exist.")
@@ -518,8 +523,7 @@ def move(args):
                 # ans = input("Is this ok y/n [n]?  ")
                 # ans.lower()
                 # if ans == 'y':
-                if not dry_run:
-                    _execute_move(src, dst)
+                _execute_move(src, dst)
             else:
                 print("The Entry for \"{}\" was not found.".format(os.path.basename(src)))
                 if vol_num in dup_volunteers_db:
@@ -746,11 +750,73 @@ def find_directories(args):
 def _move_msg(directories, filename):
     logging.debug("move_msgs(...)")
 
-    for dir in directories:
-        answer = _ask_y_n("Do you want to move the file {} to {}? ".format(filename, dir), default='y')
-        if answer.lower() == 'y':
-            _execute_move(filename, dir)
-            return
+    if len(directories) > 1:
+        for dir in directories:
+            answer = _ask_y_n("Do you want to move the file {} to {}? ".format(os.path.basename(filename), dir), default='y')
+            if answer.lower() == 'y':
+                _execute_move(filename, dir)
+                return
+    else:
+        _execute_move(filename, directories[0])
+
+
+def my_move(args):
+    global volunteer_num_db
+    global volunteer_name_db
+    
+    logging.debug("move_msgs({})".format(args))
+
+    if os.path.exists(name_db_filename):
+        answer = _ask_y_n("The DB files exist do you want to overwrite them? ", default='n')
+        if answer == 'y':
+            _create_db()
+            # print(json.dumps(volunteer_name_db, indent=2))
+            # print(json.dumps(volunteer_num_db, indent=2))
+        else:
+            with open(name_db_filename, 'r') as fin:
+                volunteer_name_db = json.load(fin)
+            # with open(num_db_filename, 'r') as fin:
+            #    volunteer_num_db = json.load(fin)
+            # print(json.dumps(volunteer_name_db, indent=2))
+            # print(json.dumps(volunteer_num_db, indent=2))
+    else:
+        _create_db()
+
+    fd = os.path.abspath(emails_dir)
+    for name in os.listdir(fd):
+        src = os.path.join(fd, name)
+        if not os.path.isfile(src):
+            logging.debug("{} is not a file.".format(src))
+            continue
+
+        if re.search(r'(''|[0-1])[0-9]_(''|[0-3])[0-9]_20\d{2}-\d+.pdf', name):
+            key = re.search(r'-\d+.pdf', src).group().lstrip('-').rstrip('.pdf')
+            db = volunteer_num_db
+            logging.debug("Vol Number Key: {}".format(key))
+        elif re.search(r'(''|[0-1])[0-9]_(''|[0-3])[0-9]_20\d{2}-(\w| )+.msg', name):
+            key = re.search(r'-(\w| )+.msg', src).group().lstrip('-').rstrip('.msg').replace(' ', '').lower()
+            db = volunteer_name_db
+            logging.debug("Vol Name Key: {}".format(key))
+        else:
+            logging.error("File is not an email or split page: {}".format(name))
+
+        if key in db:
+            directories = db[key]
+            _move_msg(directories, src)
+        else:
+            logging.debug("Destination not found for {}".format(key))
+            if key not in err_db:
+                err_db.append(key) 
+
+    with open(err_db_filename, 'r') as f:
+        r_db = json.load(f)
+
+    for key in r_db:
+        if key not in err_db:
+            err_db.append(key)
+
+    with open(err_db_filename, 'w') as f:
+        json.dump(err_db, f)
 
 
 def read_emails(args):
@@ -759,7 +825,7 @@ def read_emails(args):
     logging.debug("read_emails({})".format(args))
 
     if os.path.exists(name_db_filename):
-        answer = _ask_y_n("The DB files exists do you want to overwrite them? ", default='n')
+        answer = _ask_y_n("The DB files exist do you want to overwrite them? ", default='n')
         if answer == 'y':
             _create_db()
             # print(json.dumps(volunteer_name_db, indent=2))
@@ -850,7 +916,7 @@ if __name__ == '__main__':
     sm_parser.set_defaults(func=find_directories)
 
     mv_parser = sub_parsers.add_parser('move', help='Move the files')
-    mv_parser.set_defaults(func=move)
+    mv_parser.set_defaults(func=my_move)
 
     main_args = main_parser.parse_args()
     mgh_util(main_args)
