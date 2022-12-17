@@ -6,8 +6,9 @@ forms/
 forms-01/
 tmp/
 name_db.json
+test_name_db.json
 num_db.json
-err_db.json
+patch_db.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

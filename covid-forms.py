@@ -43,7 +43,7 @@ pet_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/Pet Therapy'
 dirs_to_search = [adult_volunteer_root_dir, junior_volunteer_root_dir, pet_volunteer_root_dir]
 name_db_filename = script_dir + '/name_db.json'
 num_db_filename = script_dir + '/num_db.json'
-err_db_filename = script_dir + '/err_db.json'
+patch_db_filename = script_dir + '/patch_db.json'
 
 dry_run = False
 tmp_filename = 'tmp.pdf'
@@ -55,7 +55,6 @@ dup_volunteers_db = {}
 
 volunteer_name_db = {}
 volunteer_num_db = {}
-err_db = []
 
 # Input values
 month_on_form = '07'
@@ -750,7 +749,9 @@ def find_directories(args):
 def _move_msg(directories, filename):
     logging.debug("move_msgs(...)")
 
-    if len(directories) > 1:
+    if not directories:
+        return
+    elif len(directories) > 1:
         for dir in directories:
             answer = _ask_y_n("Do you want to move the file {} to {}? ".format(os.path.basename(filename), dir), default='y')
             if answer.lower() == 'y':
@@ -770,17 +771,25 @@ def my_move(args):
         answer = _ask_y_n("The DB files exist do you want to overwrite them? ", default='n')
         if answer == 'y':
             _create_db()
-            # print(json.dumps(volunteer_name_db, indent=2))
-            # print(json.dumps(volunteer_num_db, indent=2))
         else:
             with open(name_db_filename, 'r') as fin:
                 volunteer_name_db = json.load(fin)
-            # with open(num_db_filename, 'r') as fin:
-            #    volunteer_num_db = json.load(fin)
-            # print(json.dumps(volunteer_name_db, indent=2))
-            # print(json.dumps(volunteer_num_db, indent=2))
+            with open(num_db_filename, 'r') as fin:
+                volunteer_num_db = json.load(fin)
     else:
         _create_db()
+
+    if os.path.exists(patch_db_filename):
+        with open(patch_db_filename, 'r') as f:
+            patch_db = json.load(f)
+            volunteer_name_db |= patch_db
+            volunteer_num_db |= patch_db
+    else:
+        patch_db = {}
+
+    # print(json.dumps(volunteer_name_db, indent=2))
+    # print(json.dumps(volunteer_num_db, indent=2))
+    # print(json.dumps(patch_db, indent=2))
 
     fd = os.path.abspath(emails_dir)
     for name in os.listdir(fd):
@@ -805,18 +814,11 @@ def my_move(args):
             _move_msg(directories, src)
         else:
             logging.debug("Destination not found for {}".format(key))
-            if key not in err_db:
-                err_db.append(key) 
+            if key not in patch_db:
+                patch_db[key] = None
 
-    with open(err_db_filename, 'r') as f:
-        r_db = json.load(f)
-
-    for key in r_db:
-        if key not in err_db:
-            err_db.append(key)
-
-    with open(err_db_filename, 'w') as f:
-        json.dump(err_db, f)
+    with open(patch_db_filename, 'w') as f:
+        json.dump(patch_db, f)
 
 
 def read_emails(args):
