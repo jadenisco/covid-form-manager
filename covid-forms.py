@@ -791,7 +791,7 @@ def my_move(args):
     # print(json.dumps(volunteer_num_db, indent=2))
     # print(json.dumps(patch_db, indent=2))
 
-    fd = os.path.abspath(emails_dir)
+    fd = os.path.abspath(forms_dir)
     for name in os.listdir(fd):
         src = os.path.join(fd, name)
         if not os.path.isfile(src):
@@ -808,6 +808,7 @@ def my_move(args):
             logging.debug("Vol Name Key: {}".format(key))
         else:
             logging.error("File is not an email or split page: {}".format(name))
+            continue
 
         if key in db:
             directories = db[key]
