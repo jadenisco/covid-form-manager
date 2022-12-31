@@ -29,8 +29,9 @@ vol_root_dir = '//Cifs2/voldept$'
 # vol_root_dir = 'z:/Developer/Windows/testroot'
 script_dir = vol_root_dir + '/scripts/cfm-test/covid-form-manager'
 # script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
-forms_dir = './forms'
-# forms_dir = vol_root_dir + '/.Volunteer Files/RICOH/jad'
+forms_dir = script_dir + '/forms'
+
+# jadfix: Should use only the forms directory, don't need this
 emails_dir = './emails'
 # emails_dir = './forms-01'
 
@@ -48,18 +49,17 @@ patch_db_filename = script_dir + '/patch_db.json'
 dry_run = False
 tmp_filename = 'tmp.pdf'
 
-# testroot = [os.sep, 'Cifs2', 'voldept$']
-
-volunteer_dir_db = {}
-dup_volunteers_db = {}
-
 volunteer_name_db = {}
 volunteer_num_db = {}
+patch_db = {}
 
-# Input values
-month_on_form = '07'
-day_on_form = '15'
-year_on_form = '2022'
+# jadfix: Don't need these
+dup_volunteers_db = {}
+volunteer_dir_db = {}
+
+month_on_form = '01'
+day_on_form = '02'
+year_on_form = '2023'
 use_previous_date = False
 
 def _ask_y_n(question, default='y'):
@@ -207,7 +207,11 @@ def create_validate_forms(create_form):
 def _show_pdf(pdf_filename):
     logging.debug('_show_pdf({}):'.format(pdf_filename))
 
+    if dry_run:
+        return
+
     if os.name == 'nt':
+        # jadfix: try this again
         # fwin = win32gui.GetForegroundWindow()
         _exec_shell_command('start {}'.format(pdf_filename))
         # print("FWIN: {}".format(fwin))
@@ -242,12 +246,34 @@ def _create_name_directory_db(root_dir):
                 db_entry_list.append(name_with_path)
                 volunteer_name_dir_db[key] = db_entry_list
 
+def _patch_db():
+    global volunteer_name_db
+    global volunteer_num_db
+    global patch_db
+
+    if os.path.exists(patch_db_filename):
+        with open(patch_db_filename, 'r') as f:
+            patch_db = json.load(f)
+            volunteer_name_db |= patch_db
+            volunteer_num_db |= patch_db
+
 def _create_db():
     global dirs_to_search
     global volunteer_name_db
     global volunteer_num_db
 
-    logging.debug("_create_name_db()")
+    logging.debug("_create_db()")
+
+    if os.path.exists(name_db_filename):
+        answer = _ask_y_n("The DB files exist do you want to overwrite them? ", default='n')
+        if answer == 'n':
+            with open(name_db_filename, 'r') as fin:
+                volunteer_name_db = json.load(fin)
+            with open(num_db_filename, 'r') as fin:
+                volunteer_num_db = json.load(fin)
+            _patch_db()
+            return
+    
     print("Creating the databases, this may take a few minutes.....")
 
     volunteer_name_db = {} 
@@ -290,6 +316,12 @@ def _create_db():
                 volunteer_num_db[vol_num] = entry
                 print("New Num Entry: {}".format(entry))
 
+    _patch_db()
+
+    # print(json.dumps(volunteer_name_db, indent=2))
+    # print(json.dumps(volunteer_num_db, indent=2))
+    # print(json.dumps(patch_db, indent=2))
+
     with open(name_db_filename, 'w') as f:
         json.dump(volunteer_name_db, f)
     with open(num_db_filename, 'w') as f:
@@ -299,6 +331,7 @@ def _create_db():
 def _create_directory_db(root_dir):
     global volunteer_dir_db
 
+    # jadfix: there should be a better way to do this
     logging.debug("_build_directory_db({})".format(root_dir))
 
     if not root_dir:
@@ -399,12 +432,12 @@ def _get_page_filename(page_number):
 
 
 def _split_pdf(file_to_split, create_dir):
+    global use_previous_date
+
     logging.debug('split_pdf({}):'.format(file_to_split))
 
-    if create_dir:
-        _create_volunteer_directory_db()
+    _create_db()
 
-    # Split the file
     use_previous_date = False
     pdf = PdfFileReader(file_to_split)
     for page in range(pdf.getNumPages()):
@@ -413,22 +446,23 @@ def _split_pdf(file_to_split, create_dir):
 
         tpf = os.path.join(os.path.abspath(forms_dir), tmp_filename)
         logging.debug("Creating a temporary file: {}".format(tpf))
-        with open(tpf, 'wb') as out:
-            pdf_writer.write(out)
+        if not dry_run:
+            with open(tpf, 'wb') as out:
+                pdf_writer.write(out)
 
         _show_pdf(tpf)
 
         single_page_file, volunteer_number = _get_page_filename(page)
 
-        if create_dir:
-            _create_volunteer_directory(volunteer_number)
+        print("Creating file for {}: {}".format(volunteer_number, single_page_file))
+        if not os.path.isfile(single_page_file):
+            if not dry_run:
+                os.rename(os.path.join(forms_dir, tmp_filename), single_page_file)
+            if volunteer_number in volunteer_num_db:
+                directories = volunteer_num_db[volunteer_number]
+                _move_msg(directories, single_page_file)
         else:
-            print("Creating file: {}, {}".format(volunteer_number, single_page_file))
-            if not os.path.isfile(single_page_file):
-                fd = os.path.abspath(forms_dir)
-                os.rename(os.path.join(fd, tmp_filename), os.path.join(fd, single_page_file))
-            else:
-                print("The file {} already exists".format(single_page_file))
+            print("The file {} already exists".format(single_page_file))
 
 
 def validate_forms(args):
@@ -535,11 +569,13 @@ def move(args):
 def _get_file():
     global forms_dir
 
-    logging.debug("getfile()")
+    logging.debug("_get_file()")
 
-    fd = os.path.abspath(forms_dir)
-    for fname in os.listdir(fd):
-        file_with_path = os.path.join(fd, fname)
+    for fname in os.listdir(forms_dir):
+        if os.path.splitext(fname)[len(os.path.splitext(fname)) - 1] != '.pdf':
+            continue
+
+        file_with_path = os.path.join(forms_dir, fname)
         if os.path.isfile(file_with_path):
             _show_pdf(file_with_path)
             answer = _ask_y_n("Do you want to split the file {}".format(fname), default='n')
@@ -555,8 +591,7 @@ def _rename_file(src):
     dst = input("What would you like to rename it to: ")
     if os.sep not in dst:
         dst = os.path.join(os.path.dirname(src), dst)
-    ds = dst.split('.')
-    if len(ds) > 0 and ds[len(ds)-1] != 'pdf':
+    if os.path.splitext(dst)[len(os.path.splitext(dst)) - 1] != '.pdf':
         dst = dst + '.pdf'
     
     logging.debug("The new filename is: {}".format(dst))
@@ -565,21 +600,15 @@ def _rename_file(src):
 
 def split(args):
     """
-    Split a single pdf that contains covid attestation forms. The single page file names will
-    contain the date and volunteer number. If the page can not be read, the page number is in
-    place of the volunteer number.
+    Split a pdf file that contains covid attestation forms into multiple files that contain
+    a single covid attestation form. The file with the single attestation form is named with a
+    name that contains the date on the form and the volunteer number on the form. The file
+    will then be moved to tje correct directory location.
 
     :param args: The parsed input arguments
     :type args: Namespace
 
     Example: python covid-forms.py split ./scratchroot/covid-forms-Dec-14-15.pdf
-
-    When the command is run:
-
-    1. The first page contained within the pdf is shown.
-    2. The user then enters the date and volunteer number.
-    3. The file is then renamed to reflect the entered information
-    4. The previous steps are repeated for all the pages contained within the original pdf.
 
     """
 
@@ -610,7 +639,6 @@ def split(args):
                 pdf_type = out[1]
                 _exec_shell_command('assoc .pdf=MSEdgePDF')
 
-    # Get some input
     _split_pdf(file_to_split, args.create)
 
     # Change the associate for .pdf back
@@ -704,10 +732,6 @@ def _read_email_msg(filename):
 
     return name, date
 
-def move_message(directory, date):
-    logging.debug("move_message({}, {})".format(directory, date))
-
-
 
 def _find_directories(name):
     global dirs_to_search
@@ -764,32 +788,11 @@ def _move_msg(directories, filename):
 def my_move(args):
     global volunteer_num_db
     global volunteer_name_db
+    global patch_db
     
     logging.debug("move_msgs({})".format(args))
 
-    if os.path.exists(name_db_filename):
-        answer = _ask_y_n("The DB files exist do you want to overwrite them? ", default='n')
-        if answer == 'y':
-            _create_db()
-        else:
-            with open(name_db_filename, 'r') as fin:
-                volunteer_name_db = json.load(fin)
-            with open(num_db_filename, 'r') as fin:
-                volunteer_num_db = json.load(fin)
-    else:
-        _create_db()
-
-    if os.path.exists(patch_db_filename):
-        with open(patch_db_filename, 'r') as f:
-            patch_db = json.load(f)
-            volunteer_name_db |= patch_db
-            volunteer_num_db |= patch_db
-    else:
-        patch_db = {}
-
-    # print(json.dumps(volunteer_name_db, indent=2))
-    # print(json.dumps(volunteer_num_db, indent=2))
-    # print(json.dumps(patch_db, indent=2))
+    _create_db()
 
     fd = os.path.abspath(emails_dir)
     for name in os.listdir(fd):
@@ -826,18 +829,8 @@ def read_emails(args):
 
     logging.debug("read_emails({})".format(args))
 
-    if os.path.exists(name_db_filename):
-        answer = _ask_y_n("The DB files exist do you want to overwrite them? ", default='n')
-        if answer == 'y':
-            _create_db()
-            # print(json.dumps(volunteer_name_db, indent=2))
-        else:
-            with open(name_db_filename, 'r') as fin:
-                volunteer_name_db = json.load(fin)
-            # print(json.dumps(volunteer_name_db, indent=2))
-    else:
-        _create_db()
-    
+    _create_db()
+
     fd = os.path.basename(emails_dir)
     for filename in os.listdir(fd):
         file_with_path = os.path.join(fd, filename)
@@ -898,6 +891,8 @@ if __name__ == '__main__':
         epilog='See "%(prog)s help COMMAND" for help on a specific command.')
     main_parser.add_argument('--debug', '-d', action='count', help='Print debug output')
     main_parser.add_argument('--dry-run', '-dr', action='count', help='Print debug output')
+
+    # jadfix: Create should have it's own function
     main_parser.add_argument('--create', '-c', action='count', help='Create a directory if needed')
     sub_parsers = main_parser.add_subparsers()
 
