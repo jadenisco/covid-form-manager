@@ -794,7 +794,7 @@ def my_move(args):
 
     _create_db()
 
-    fd = os.path.abspath(emails_dir)
+    fd = os.path.abspath(forms_dir)
     for name in os.listdir(fd):
         src = os.path.join(fd, name)
         if not os.path.isfile(src):
@@ -811,6 +811,7 @@ def my_move(args):
             logging.debug("Vol Name Key: {}".format(key))
         else:
             logging.error("File is not an email or split page: {}".format(name))
+            continue
 
         if key in db:
             directories = db[key]
