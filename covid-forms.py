@@ -575,7 +575,7 @@ def _get_file():
         if os.path.splitext(fname)[len(os.path.splitext(fname)) - 1] != '.pdf':
             continue
 
-        file_with_path = os.path.join(forms_dir, fname)
+        file_with_path = os.path.join(os.path.abspath(forms_dir), fname)
         if os.path.isfile(file_with_path):
             _show_pdf(file_with_path)
             answer = _ask_y_n("Do you want to split the file {}".format(fname), default='n')
