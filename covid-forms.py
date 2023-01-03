@@ -832,7 +832,7 @@ def read_emails(args):
 
     _create_db()
 
-    fd = os.path.basename(emails_dir)
+    fd = os.path.basename(forms_dir)
     for filename in os.listdir(fd):
         file_with_path = os.path.join(fd, filename)
         if file_with_path.find('.msg') == -1:
