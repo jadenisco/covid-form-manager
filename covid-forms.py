@@ -802,11 +802,15 @@ def my_move(args):
             continue
 
         if re.search(r'(''|[0-1])[0-9]_(''|[0-3])[0-9]_20\d{2}-\d+.pdf', name):
-            key = re.search(r'-\d+.pdf', src).group().lstrip('-').rstrip('.pdf')
+            # jadfix: 
+            # key = re.search(r'-\d+.pdf', src).group().lstrip('-').rstrip('.pdf')
+            key = os.path.splitext(name)[0].split('-')[1]
             db = volunteer_num_db
             logging.debug("Vol Number Key: {}".format(key))
         elif re.search(r'(''|[0-1])[0-9]_(''|[0-3])[0-9]_20\d{2}-(\w| )+.msg', name):
-            key = re.search(r'-(\w| )+.msg', src).group().lstrip('-').rstrip('.msg').replace(' ', '').lower()
+            # jadfix: 
+            #key = re.search(r'-(\w| )+.msg', src).group().lstrip('-').rstrip('.msg').replace(' ', '').lower()
+            key = os.path.splitext(name)[0].split('-')[1].replace(' ', '')
             db = volunteer_name_db
             logging.debug("Vol Name Key: {}".format(key))
         else:
@@ -835,6 +839,7 @@ def read_emails(args):
     fd = os.path.basename(forms_dir)
     for filename in os.listdir(fd):
         file_with_path = os.path.join(fd, filename)
+        # jadfix: use os path
         if file_with_path.find('.msg') == -1:
             logging.debug("{} is not an email.".format(file_with_path))
             continue
