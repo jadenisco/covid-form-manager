@@ -721,14 +721,14 @@ def _read_email_msg(filename):
     logging.debug("read_email_msg({})".format(filename))
 
     msg = MsOxMessage(filename)
-    date_time_name = re.findall(r'\d+/\d+/\d+ \d+:\d+:\d+[\r|\n]+[A-Z|a-z| ]+[\r|\n]+', msg.body)
+    date_time_name = re.findall(r'\d+/\d+/\d+ \d+:\d+:\d+[\r|\n]+[A-Z|a-z| -]+[\r|\n]+', msg.body)
     if len(date_time_name) == 0:
         logging.error("Date, Time and Name was not found for {}!".format(filename))
         return None, None
 
     date_time_name = date_time_name[0]
     date = re.findall(r'\d+/\d+/\d+', date_time_name)[0].replace('/', '_')
-    name = re.findall(r'[\r|\n]+[A-Z|a-z| ]+[\r|\n]+', date_time_name)[0].strip()
+    name = re.findall(r'[\r|\n]+[A-Z|a-z| -]+[\r|\n]+', date_time_name)[0].strip()
 
     return name, date
 
@@ -810,7 +810,7 @@ def my_move(args):
         elif re.search(r'(''|[0-1])[0-9]_(''|[0-3])[0-9]_20\d{2}-(\w| )+.msg', name):
             # jadfix: 
             #key = re.search(r'-(\w| )+.msg', src).group().lstrip('-').rstrip('.msg').replace(' ', '').lower()
-            key = os.path.splitext(name)[0].split('-')[1].replace(' ', '')
+            key = os.path.splitext(name)[0].split('-')[1].replace(' ', '').lower()
             db = volunteer_name_db
             logging.debug("Vol Name Key: {}".format(key))
         else:
