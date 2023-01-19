@@ -448,6 +448,7 @@ def _split_pdf(file_to_split, create_dir):
 
         _show_pdf(tpf)
 
+        print('+++++++++++++++++++++++++++++++++++')
         single_page_file, volunteer_number = _get_page_filename(page)
 
         print("Creating file for {}: {}".format(volunteer_number, single_page_file))
@@ -459,6 +460,8 @@ def _split_pdf(file_to_split, create_dir):
                 _move_msg(directories, single_page_file)
         else:
             print("The file {} already exists".format(single_page_file))
+
+    print('+++++++++++++++++++++++++++++++++++')
 
 
 def validate_forms(args):
@@ -482,11 +485,15 @@ def create_directories(args):
     # Parse the csv data and create the directory structure
     create_validate_forms(True)
 
-def _show_form_dir(form_dir):
+def _show_form_dir(forms_dir):
     print('-----------------------------------')
-    print(form_dir.replace(vol_root_dir, ''))
-    for name in os.listdir('.'):
-        print('   {}'.format(name))
+    print(forms_dir.replace(vol_root_dir, ''))
+    if dry_run:
+        for name in os.listdir('.'):
+            print('   {}'.format(name))
+    else:
+        for name in os.listdir(forms_dir):
+            print('   {}'.format(name))
 
 def _execute_move(src, dst):
     logging.debug("_execute_move({}, {})".format(os.path.basename(src), dst))
