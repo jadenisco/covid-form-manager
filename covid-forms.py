@@ -31,10 +31,6 @@ script_dir = vol_root_dir + '/scripts/cfm-test/covid-form-manager'
 # script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
 forms_dir = script_dir + '/forms'
 
-# jadfix: Should use only the forms directory, don't need this
-emails_dir = './emails'
-# emails_dir = './forms-01'
-
 # Volunteer root directories
 adult_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/ADULT MEDICAL AND NONMEDICAL'
 junior_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/JUNIOR MEDICAL AND NONMEDICAL/Active JR Volunteers'
@@ -486,16 +482,19 @@ def create_directories(args):
     # Parse the csv data and create the directory structure
     create_validate_forms(True)
 
+def _show_form_dir(form_dir):
+    print('-----------------------------------')
+    print(form_dir.replace(vol_root_dir, ''))
+    for name in os.listdir('.'):
+        print('   {}'.format(name))
 
 def _execute_move(src, dst):
     logging.debug("_execute_move({}, {})".format(os.path.basename(src), dst))
 
-    if dry_run:
-        return
-
-    if not os.path.isdir(dst):
-        print("ERROR: The Directory {} does NOT exist.")
-        return
+    if not dry_run:
+        if not os.path.isdir(dst):
+            print("ERROR: The Directory {} does NOT exist.")
+            return
 
     cv_date = re.search(r'(''|[0-1])[0-9]_(''|[0-3])[0-9]_20\d{2}', src).group().split('_')
     cv_month = calendar.month_name[int(cv_date[0])]
@@ -504,16 +503,20 @@ def _execute_move(src, dst):
     cv_form_dir = 'Covid Forms {}'.format(cv_year)
     cv_form_dir = os.path.join(dst, cv_form_dir)
     if not os.path.isdir(cv_form_dir):
-        os.makedirs(cv_form_dir)
+        if not dry_run:
+            os.makedirs(cv_form_dir)
 
     cv_form_dir = os.path.join(cv_form_dir, cv_month)
     if not os.path.isdir(cv_form_dir):
-        os.makedirs(cv_form_dir)
+        if not dry_run:
+            os.makedirs(cv_form_dir)
 
     filename = os.path.basename(src)
     dst_file = os.path.join(cv_form_dir, filename)
     if not os.path.isfile(dst_file):
-        shutil.move(src, cv_form_dir)
+        if not dry_run:
+            shutil.move(src, cv_form_dir)
+        _show_form_dir(cv_form_dir)
     else:
         print("\nThe file {} already exists".format(dst_file))
 
@@ -727,7 +730,7 @@ def _read_email_msg(filename):
         return None, None
 
     date_time_name = date_time_name[0]
-    date = re.findall(r'\d+/\d+/\d+', date_time_name)[0].replace('/', '_')
+    date = re.findall(r'\d+/\d+/\d+', date_time_name)[0]
     name = re.findall(r'[\r|\n]+[\w+| |-]+[\r|\n]+', date_time_name)[0].strip()
 
     return name, date
@@ -847,7 +850,7 @@ def read_emails(args):
             print('+++++++++++++++++++++++++++++++++++')
             continue
 
-        new_filename = "{}-{}.msg".format(date, name)
+        new_filename = "{}-{}.msg".format(date.replace('/', '_'), name)
         new_file_with_path = os.path.join(fd, new_filename)
         print('+++++++++++++++++++++++++++++++++++')
         print("Enter Volgistics information for:")
@@ -857,7 +860,7 @@ def read_emails(args):
         while answer.lower() != 'y':
             answer = _ask_y_n("Have you entered the information into Volgistics? ", default='y')
 
-        print("Rename the file from {} to {}".format(file_with_path, new_file_with_path))
+        print("Renaming the file from {} to {}".format(file_with_path, new_file_with_path))
         if not os.path.exists(new_file_with_path):
             os.rename(file_with_path, new_file_with_path)
 

@@ -8,7 +8,7 @@
             "program": "${workspaceFolder}/covid-forms.py",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["-d", "read-emails"]
+            "args": ["-dr", "read-emails"]
         }
     ]
 }
