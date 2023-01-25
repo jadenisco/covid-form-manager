@@ -32,10 +32,10 @@ script_dir = vol_root_dir + '/scripts/cfm-test/covid-form-manager'
 forms_dir = script_dir + '/forms'
 
 # Volunteer root directories
+pet_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/Pet Therapy'
+# pet_volunteer_root_dir = None
 adult_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/ADULT MEDICAL AND NONMEDICAL'
 junior_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/JUNIOR MEDICAL AND NONMEDICAL/Active JR Volunteers'
-# pet_volunteer_root_dir = None
-pet_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/Pet Therapy'
 
 dirs_to_search = [adult_volunteer_root_dir, junior_volunteer_root_dir, pet_volunteer_root_dir]
 name_db_filename = script_dir + '/name_db.json'
@@ -610,16 +610,16 @@ def _rename_file(src):
 
 def split(args):
     """
-    Split a pdf file that contains covid attestation forms into multiple files that contain
+    Split a pdf file that contains multiple covid attestation forms into multiple files that contain
     a single covid attestation form. The file with the single attestation form is named with a
     name that contains the date on the form and the volunteer number on the form. The file
-    will then be moved to tje correct directory location.
+    will then be moved to the correct directory location.
 
     :param args: The parsed input arguments
     :type args: Namespace
 
-    Example: python covid-forms.py split ./scratchroot/covid-forms-Dec-14-15.pdf
-
+    Examples: python covid-forms.py split ./scratchroot/covid-forms-Dec-14-15.pdf
+              python covid-forms.py split # Will look in the forms directory for valid pdf files.
     """
 
     logging.debug("split({})".format(args))
@@ -655,7 +655,7 @@ def split(args):
     if os.name == 'nt':
         _exec_shell_command('assoc .pdf={}'.format(pdf_type))
 
-def _extract_name_date(msg):
+def _extract_name_date_eml(msg):
     logging.debug("_extract_name_date(msg)")
 
     content_type = msg.get_content_type()
@@ -703,6 +703,8 @@ def _move_email(src, clear_date, name):
 
 
 def _read_email_eml(filename):
+    # This function is currently not used, because we read .msg format.
+    # We want to keep this around in case someday we want to read .eml format
     logging.debug("_read_email_eml({})".format(filename))
 
     with open(filename, 'rb') as f:
@@ -717,11 +719,11 @@ def _read_email_eml(filename):
 
     if msg.is_multipart():
         for part in msg.walk():
-            clear_date, name = _extract_name_date(part)
+            clear_date, name = _extract_name_date_eml(part)
             if clear_date:
                 break
     else:
-        clear_date, name = _extract_name_date(msg)
+        clear_date, name = _extract_name_date_eml(msg)
 
     if clear_date:
         _move_email(filename, clear_date, name)
@@ -731,14 +733,14 @@ def _read_email_msg(filename):
     logging.debug("read_email_msg({})".format(filename))
 
     msg = MsOxMessage(filename)
-    date_time_name = re.findall(r'\d+/\d+/\d+ \d+:\d+:\d+[\r|\n]+[\w+| |-]+[\r|\n]+', msg.body)
+    date_time_name = re.findall(r'\d+/\d+/\d+ \d+:\d+:\d+[\r|\n|\t]+[\w+| |-]+[\r|\n]+', msg.body)
     if len(date_time_name) == 0:
         logging.error("Date, Time and Name was not found for {}!".format(filename))
         return None, None
 
     date_time_name = date_time_name[0]
     date = re.findall(r'\d+/\d+/\d+', date_time_name)[0]
-    name = re.findall(r'[\r|\n]+[\w+| |-]+[\r|\n]+', date_time_name)[0].strip()
+    name = re.findall(r'[\r|\n|\t]+[\w+| |-]+[\r|\n]+', date_time_name)[0].strip()
 
     return name, date
 
@@ -838,6 +840,17 @@ def my_move(args):
 
 
 def read_emails(args):
+    """
+    Read email files from the forms directory. Extract the name and date contained in the and then rename
+    the email the email file with a name that contains the date and name that was extracted from the email.
+    Once this is done move that file to the appropriate volunteer directory. The contents of that directory
+    will then be shown so the user can verify it's contents,
+    
+    :param args: The parsed input arguments
+    :type args: Namespace
+
+    Examples: python covid-forms.py -d read-emails
+    """
     global volunteer_name_db
 
     logging.debug("read_emails({})".format(args))
@@ -845,10 +858,9 @@ def read_emails(args):
     _create_db()
 
     fd = os.path.basename(forms_dir)
-    for filename in os.listdir(fd):
-        file_with_path = os.path.join(fd, filename)
-        # jadfix: use os path
-        if file_with_path.find('.msg') == -1:
+    for fname in os.listdir(fd):
+        file_with_path = os.path.join(fd, fname)
+        if os.path.splitext(fname)[len(os.path.splitext(fname)) - 1] != '.msg':
             logging.debug("{} is not an email.".format(file_with_path))
             continue
 
@@ -863,9 +875,9 @@ def read_emails(args):
         print("Enter Volgistics information for:")
         print("   Date: {}".format(date))
         print("   Name: {}".format(name))
-        answer = 'n'
-        while answer.lower() != 'y':
-            answer = _ask_y_n("Have you entered the information into Volgistics? ", default='y')
+        answer = _ask_y_n("Have you entered the information into Volgistics? ", default='y')
+        if answer == 'n':
+            continue
 
         print("Renaming the file from {} to {}".format(file_with_path, new_file_with_path))
         if not os.path.exists(new_file_with_path):

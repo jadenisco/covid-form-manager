@@ -1,7 +1,7 @@
 Write-Host "The Covid Form Manager"
 //cifs2/voldept$/Scripts/covid-form-manager/.venv/Scripts/Activate.ps1
 Set-Location //cifs2/voldept$/Scripts/covid-form-manager
-python.exe ./covid-forms.py -d split
+python.exe ./covid-forms.py -h
 # python.exe ./covid-forms.py split '.\forms\Covid Forms 04-19-2022.pdf'
 # deactivate
 # Write-Host -NoNewLine 'Press any key to exit...';
