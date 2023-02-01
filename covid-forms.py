@@ -25,10 +25,10 @@ from PyPDF2 import PdfFileReader, PdfFileWriter
 volunteers = {}
 
 vol_root_dir = '//Cifs2/voldept$'
-# vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
+vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
 # vol_root_dir = 'z:/Developer/Windows/testroot'
-script_dir = vol_root_dir + '/scripts/cfm-test/covid-form-manager'
-# script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
+# script_dir = vol_root_dir + '/scripts/cfm-test/covid-form-manager'
+script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
 forms_dir = script_dir + '/forms'
 
 # Volunteer root directories
@@ -814,6 +814,11 @@ def my_move(args):
             continue
 
         if re.search(r'(''|[0-1])[0-9]_(''|[0-3])[0-9]_20\d{2}-\d+.pdf', name):
+            name_date = os.path.splitext(name)[0]
+            key = re.search(r'-\d+', name_date).group().lstrip('-')
+            db = volunteer_num_db
+            logging.debug("Vol Number Key: {}".format(key))
+        elif re.search(r'(''|[0-1])[0-9]_(''|[0-3])[0-9]_20\d{2}-(\w| |-)+.eml', name):
             name_date = os.path.splitext(name)[0]
             key = re.search(r'-\d+', name_date).group().lstrip('-')
             db = volunteer_num_db

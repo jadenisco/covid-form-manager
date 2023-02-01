@@ -1,0 +1,16 @@
+
+1: The name looks wrong in the file, remove from patch and fix directory. Email
+shows Thao-Mi.
+
+"mi-thaonguyen": [
+        "//Cifs2/voldept$/.Volunteer Files/ADULT MEDICAL AND NONMEDICAL\\876 Nguyen, Mi-Thao"
+    ],
+
+2: Remove Barbara Napoleane from patch. Check Directory.
+
+3: Jason Tang, The directory is wrong. The comma is in the wrong place.
+
+Remove from patch
+
+4: Just rename the pdf and eml attachments and then execute move them
+
