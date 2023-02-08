@@ -14,3 +14,8 @@ Remove from patch
 
 4: Just rename the pdf and eml attachments and then execute move them
 
+5: The directory name is wrong for the key zhuoyansi u and o are reversed.
+
+"zhouyansi": [
+        "//Cifs2/voldept$/.Volunteer Files/ADULT MEDICAL AND NONMEDICAL\\3736 Si, Zhouyan"
+    ],

@@ -2,12 +2,14 @@
     "cSpell.words": [
         "Cifs",
         "fwin",
+        "pdftotext",
         "pywintypes",
         "scratchroot",
         "spname",
         "termcolor",
         "testroot",
         "voldept",
-        "Volgistics"
+        "Volgistics",
+        "volid"
     ]
 }

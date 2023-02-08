@@ -5,8 +5,10 @@ import re
 import subprocess
 import calendar
 import json
-import time
 import glob
+import time
+import pdftotext
+import csv
 from msg_parser import MsOxMessage
 import email
 from email.header import decode_header
@@ -25,10 +27,10 @@ from PyPDF2 import PdfFileReader, PdfFileWriter
 volunteers = {}
 
 vol_root_dir = '//Cifs2/voldept$'
-vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
+# vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
 # vol_root_dir = 'z:/Developer/Windows/testroot'
-# script_dir = vol_root_dir + '/scripts/cfm-test/covid-form-manager'
-script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
+script_dir = vol_root_dir + '/scripts/cfm-test/covid-form-manager'
+# script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
 forms_dir = script_dir + '/forms'
 
 # Volunteer root directories
@@ -48,6 +50,7 @@ tmp_filename = 'tmp.pdf'
 volunteer_name_db = {}
 volunteer_num_db = {}
 patch_db = {}
+csv_db = {}
 
 # jadfix: Don't need these
 dup_volunteers_db = {}
@@ -434,6 +437,11 @@ def _split_pdf(file_to_split, create_dir):
 
     _create_db()
 
+    # May not be needed
+    # with open(file_to_split, "rb") as f:
+    #    pdf = pdftotext.PDF(f)
+    # print(len(pdf))
+
     use_previous_date = False
     pdf = PdfFileReader(file_to_split)
     for page in range(pdf.getNumPages()):
@@ -607,6 +615,41 @@ def _rename_file(src):
     logging.debug("The new filename is: {}".format(dst))
     os.rename(src, dst)
     return dst
+
+def read_csv(args):
+    """
+    Read a csv file that contains data that represents covid forms submitted using an app created
+    from the REDCap project. The data is a list of records. Each record contains, the date the form
+    was created, the number of the volunteer that submitted the form and the answers to the questions
+    on the form.
+
+    The program does the following:
+
+    1. Read the csv file and create a dictionary with each entry representing a single form.
+    2. Check the record and make sure the questions were answered correctly.
+    3. Give the user a chance to enter the data into volgistics.
+    4. Find the pdf file associated with that form (We may only get a single pdf file, if so we need to split it
+    into single files).
+    5. Move the file to the appropriate location.
+    
+    :param args: The parsed input arguments
+    :type args: Namespace
+
+    Examples: python covid-forms.py read-csv
+    """
+    global csv_db
+
+    logging.debug("read_csv({})".format(args))
+
+    # Create csv db
+    csv_db = {}
+    with open(forms_dir + "/Attestation-data.csv") as csv_file:
+        csv_data = csv.DictReader(csv_file)
+        for row in enumerate(csv_data):
+            num_key = row[1]['volid']
+            name_key = row[1]['first_name'] + row[1]['last_name']
+            csv_db.update(dict.fromkeys([num_key, name_key], row[1]))
+            logging.debug("Record id {}: {}".format(row[1]['record_id'], row[1]))
 
 def split(args):
     """
@@ -939,6 +982,9 @@ if __name__ == '__main__':
 
     sm_parser = sub_parsers.add_parser('read-emails', help='read emails')
     sm_parser.set_defaults(func=read_emails)
+
+    sm_parser = sub_parsers.add_parser('read-csv', help='read the csv file')
+    sm_parser.set_defaults(func=read_csv)
 
     sm_parser = sub_parsers.add_parser('find-dir', help='find dir')
     sm_parser.set_defaults(func=find_directories)
