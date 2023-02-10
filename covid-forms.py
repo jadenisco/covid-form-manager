@@ -534,11 +534,8 @@ def create_directories(args):
 def _show_form_dir(forms_dir):
     print('-----------------------------------')
     print(forms_dir.replace(vol_root_dir, ''))
-    if dry_run:
+    if not dry_run:
         for name in os.listdir('.'):
-            print('   {}'.format(name))
-    else:
-        for name in os.listdir(forms_dir):
             print('   {}'.format(name))
 
 def _execute_move(src, dst):
@@ -571,7 +568,7 @@ def _execute_move(src, dst):
             shutil.move(src, cv_form_dir)
         _show_form_dir(cv_form_dir)
     else:
-        print("\nThe file {} already exists".format(dst_file))
+        logging.error("\nThe file {} already exists".format(dst_file))
 
 
 def move(args):
