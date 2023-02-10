@@ -7,13 +7,13 @@ import calendar
 import json
 import glob
 import time
-import pdftotext
 import csv
 from msg_parser import MsOxMessage
 import email
 from email.header import decode_header
 import shutil
 from PyPDF2 import PdfFileReader, PdfFileWriter
+import pdftotext
 
 #if os.name == 'nt': 
 #    import pywintypes
@@ -26,16 +26,16 @@ from PyPDF2 import PdfFileReader, PdfFileWriter
 # number: , last name: , first name:, service dates[]:
 volunteers = {}
 
-vol_root_dir = '//Cifs2/voldept$'
-# vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
+# vol_root_dir = '//Cifs2/voldept$'
+vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
 # vol_root_dir = 'z:/Developer/Windows/testroot'
-script_dir = vol_root_dir + '/scripts/cfm-test/covid-form-manager'
-# script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
+# script_dir = vol_root_dir + '/scripts/cfm-test/covid-form-manager'
+script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
 forms_dir = script_dir + '/forms'
 
 # Volunteer root directories
-pet_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/Pet Therapy'
-# pet_volunteer_root_dir = None
+# pet_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/Pet Therapy'
+pet_volunteer_root_dir = None
 adult_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/ADULT MEDICAL AND NONMEDICAL'
 junior_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/JUNIOR MEDICAL AND NONMEDICAL/Active JR Volunteers'
 
@@ -389,6 +389,46 @@ def _create_volunteer_directory(volunteer_number):
     else:
         logging.debug('A Directory for {} already exists'.format(volunteer_number))
 
+def _extract_page_filename(page_filename, page_number):
+
+    logging.debug("_extract_page_filename({})".format(page_filename))
+
+    with open(page_filename, 'rb') as tmp_in:
+        text = pdftotext.PDF(tmp_in)    
+    contents = text[0]
+
+    date = None
+    rx = re.findall(r'Response was added on \d+/\d+/\d+ ', contents)
+    if len(rx) != 0:
+        date = rx[0].lstrip('Response was added on ').rstrip(' ').replace('/', '_')
+
+    volunteer_num = '({})'.format(page_number)
+    rx = re.findall(r'\n\nVolunteer ID\n\n\d+\n\n', contents)
+    if len(rx) != 0:
+        volunteer_num  = rx[0].lstrip('\n\nVolunteer ID\n\n').rstrip('\n\n')
+
+    first_name = ''
+    rx = re.findall(r'\n\nMGH Volunteer First Name\n\n\w+\n\n', contents)
+    if len(rx) != 0:
+        first_name = rx[0].lstrip('\n\nnMGH Volunteer First Name\n\n').rstrip('\n\n')
+
+    last_name = ''
+    rx = re.findall(r'\n\nMGH Volunteer Last Name\n\n\w+\n\n', contents)
+    if len(rx) != 0:
+        last_name = rx[0].lstrip('\n\nnMGH Volunteer Last Name\n\n').rstrip('\n\n')
+
+    volunteer_name = first_name + ' ' + last_name
+    logging.debug('Date: {} Number: {} Name: {}'.format(date, volunteer_num, volunteer_name))
+
+    rx = re.findall(r'Cleared For Work', contents)
+    if len(rx) != 0:
+        new_filename = '{}-{}.pdf'.format(date, volunteer_num)
+    else:
+        new_filename = 'Not Cleared For Work {}-{}.pdf'.format(date, volunteer_num)
+
+    new_filename = os.path.join(os.path.abspath(forms_dir), new_filename)
+
+    return new_filename, volunteer_num, volunteer_name
 
 def _get_page_filename(page_number):
     global month_on_form
@@ -437,37 +477,35 @@ def _split_pdf(file_to_split, create_dir):
 
     _create_db()
 
-    # May not be needed
-    # with open(file_to_split, "rb") as f:
-    #    pdf = pdftotext.PDF(f)
-    # print(len(pdf))
-
     use_previous_date = False
     pdf = PdfFileReader(file_to_split)
+
     for page in range(pdf.getNumPages()):
         pdf_writer = PdfFileWriter()
         pdf_writer.addPage(pdf.getPage(page))
 
         tpf = os.path.join(os.path.abspath(forms_dir), tmp_filename)
         logging.debug("Creating a temporary file: {}".format(tpf))
-        if not dry_run:
-            with open(tpf, 'wb') as out:
-                pdf_writer.write(out)
-
-        _show_pdf(tpf)
+        with open(tpf, 'wb') as tmp_out:
+            pdf_writer.write(tmp_out)
 
         print('+++++++++++++++++++++++++++++++++++')
-        single_page_file, volunteer_number = _get_page_filename(page)
+        single_page_filename, volunteer_number, volunteer_name = _extract_page_filename(tpf, page)
+        if not single_page_filename:
+            _show_pdf(tpf)
+            single_page_filename, volunteer_number = _get_page_filename(page)
 
-        print("Creating file for {}: {}".format(volunteer_number, single_page_file))
-        if not os.path.isfile(single_page_file):
-            if not dry_run:
-                os.rename(os.path.join(forms_dir, tmp_filename), single_page_file)
+        print("Creating file for {}: {}".format(volunteer_number, single_page_filename))
+        if not os.path.isfile(single_page_filename):
+            os.rename(os.path.join(forms_dir, tmp_filename), single_page_filename)
             if volunteer_number in volunteer_num_db:
                 directories = volunteer_num_db[volunteer_number]
-                _move_msg(directories, single_page_file)
+                _move_msg(directories, single_page_filename)
         else:
-            print("The file {} already exists".format(single_page_file))
+            logging.error("The file {} already exists".format(single_page_filename))
+            new_filename = os.path.splitext(single_page_filename)[0] + ' ({})'.format(str(page)) 
+            new_filename = new_filename + ' {}'.format(os.path.splitext(single_page_filename)[1])
+            os.rename(os.path.join(forms_dir, tmp_filename), new_filename)
 
     print('+++++++++++++++++++++++++++++++++++')
 
