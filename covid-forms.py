@@ -26,16 +26,16 @@ import pdftotext
 # number: , last name: , first name:, service dates[]:
 volunteers = {}
 
-# vol_root_dir = '//Cifs2/voldept$'
-vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
+vol_root_dir = '//Cifs2/voldept$'
+# vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
 # vol_root_dir = 'z:/Developer/Windows/testroot'
-# script_dir = vol_root_dir + '/scripts/cfm-test/covid-form-manager'
-script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
+script_dir = vol_root_dir + '/scripts/cfm-test/covid-form-manager'
+# script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
 forms_dir = script_dir + '/forms'
 
 # Volunteer root directories
-# pet_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/Pet Therapy'
-pet_volunteer_root_dir = None
+pet_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/Pet Therapy'
+# pet_volunteer_root_dir = None
 adult_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/ADULT MEDICAL AND NONMEDICAL'
 junior_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/JUNIOR MEDICAL AND NONMEDICAL/Active JR Volunteers'
 
@@ -50,7 +50,6 @@ tmp_filename = 'tmp.pdf'
 volunteer_name_db = {}
 volunteer_num_db = {}
 patch_db = {}
-csv_db = {}
 
 # jadfix: Don't need these
 dup_volunteers_db = {}
@@ -672,19 +671,37 @@ def read_csv(args):
 
     Examples: python covid-forms.py read-csv
     """
-    global csv_db
-
     logging.debug("read_csv({})".format(args))
 
-    # Create csv db
-    csv_db = {}
-    with open(forms_dir + "/Attestation-data.csv") as csv_file:
+    csv_filenames = glob.glob(forms_dir + '/*.csv')
+    if len(csv_filenames) > 1:
+        for filename in csv_filenames:
+            answer = _ask_y_n("Do you want to read the file {}".format(os.path.basename(filename)), default='n')
+            if answer == 'y':
+                csv_filename = filename
+    elif len(csv_filenames) == 1:
+        csv_filename = csv_filenames[0]
+    elif len(csv_filenames) == 0:
+        logging.error("There are no csv filenames to read!")
+        return
+
+    with open(csv_filename) as csv_file:
         csv_data = csv.DictReader(csv_file)
         for row in enumerate(csv_data):
             num_key = row[1]['volid']
-            name_key = row[1]['first_name'] + row[1]['last_name']
-            csv_db.update(dict.fromkeys([num_key, name_key], row[1]))
-            logging.debug("Record id {}: {}".format(row[1]['record_id'], row[1]))
+            name = row[1]['first_name'] + ' ' + row[1]['last_name']
+            date = row[1]['date'].split()[0]
+            ds = date.split('-')
+            date = ds[1] + '/' + ds[2] + '/' + ds[0]
+            print('+++++++++++++++++++++++++++++++++++')
+            print("Enter Volgistics information for:")
+            print("   Number: {}".format(num_key))
+            print("     Date: {}".format(date))
+            print("     Name: {}".format(name))
+            answer = 'n'
+            while answer == 'n':
+                answer = _ask_y_n("Have you entered the information into Volgistics? ", default='y')
+
 
 def split(args):
     """
