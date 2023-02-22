@@ -13,7 +13,7 @@ import email
 from email.header import decode_header
 import shutil
 from PyPDF2 import PdfFileReader, PdfFileWriter
-import pdftotext
+# import pdftotext
 
 #if os.name == 'nt': 
 #    import pywintypes
@@ -392,10 +392,11 @@ def _extract_page_filename(page_filename, page_number):
 
     logging.debug("_extract_page_filename({})".format(page_filename))
 
-    with open(page_filename, 'rb') as tmp_in:
-        text = pdftotext.PDF(tmp_in)    
-    contents = text[0]
+    #with open(page_filename, 'rb') as tmp_in:
+    #    text = pdftotext.PDF(tmp_in)    
+    #contents = text[0]
 
+    contents = ''
     date = None
     rx = re.findall(r'Response was added on \d+/\d+/\d+ ', contents)
     if len(rx) != 0:
@@ -490,6 +491,7 @@ def _split_pdf(file_to_split, create_dir):
 
         print('+++++++++++++++++++++++++++++++++++')
         single_page_filename, volunteer_number, volunteer_name = _extract_page_filename(tpf, page)
+        single_page_filename = None
         if not single_page_filename:
             _show_pdf(tpf)
             single_page_filename, volunteer_number = _get_page_filename(page)
@@ -534,7 +536,7 @@ def _show_form_dir(forms_dir):
     print('-----------------------------------')
     print(forms_dir.replace(vol_root_dir, ''))
     if not dry_run:
-        for name in os.listdir('.'):
+        for name in os.listdir(forms_dir):
             print('   {}'.format(name))
 
 def _execute_move(src, dst):

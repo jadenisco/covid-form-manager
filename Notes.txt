@@ -19,3 +19,9 @@ Remove from patch
 "zhouyansi": [
         "//Cifs2/voldept$/.Volunteer Files/ADULT MEDICAL AND NONMEDICAL\\3736 Si, Zhouyan"
     ],
+
+-----------------
+
+6. Set up min-max vol number
+7. Check databases
+
