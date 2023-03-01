@@ -9,6 +9,7 @@ name_db.json
 test_name_db.json
 num_db.json
 patch_db.json
+volgistics_to_redcap.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
