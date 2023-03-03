@@ -25,3 +25,5 @@ Remove from patch
 6. Set up min-max vol number
 7. Check databases
 
+8. Look at the csv format.
+
