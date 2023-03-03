@@ -26,11 +26,11 @@ from PyPDF2 import PdfFileReader, PdfFileWriter
 # number: , last name: , first name:, service dates[]:
 volunteers = {}
 
-vol_root_dir = '//Cifs2/voldept$'
-# vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
+# vol_root_dir = '//Cifs2/voldept$'
+vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
 # vol_root_dir = 'z:/Developer/Windows/testroot'
-script_dir = vol_root_dir + '/scripts/cfm-test/covid-form-manager'
-# script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
+# script_dir = vol_root_dir + '/scripts/cfm-test/covid-form-manager'
+script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
 forms_dir = script_dir + '/forms'
 
 # Volunteer root directories
@@ -44,8 +44,7 @@ name_db_filename = script_dir + '/name_db.json'
 num_db_filename = script_dir + '/num_db.json'
 patch_db_filename = script_dir + '/patch_db.json'
 attestation_db_filename = script_dir + '/attestation_db.json'
-volgistics_to_redcap_filename = script_dir + '/volgistics_to_redcap.json'
-no_attest_filename = script_dir + '/No Attestations.csv'
+no_attest_filename = forms_dir + '/No Attestations.csv'
 
 dry_run = False
 tmp_filename = 'tmp.pdf'
@@ -53,6 +52,9 @@ tmp_filename = 'tmp.pdf'
 volunteer_name_db = {}
 volunteer_num_db = {}
 patch_db = {}
+
+min_attestation_date = time.strptime('02-12-2023', "%m-%d-%Y")
+max_attestation_date = time.strptime('02-28-2023', "%m-%d-%Y")
 
 # jadfix: Don't need these
 dup_volunteers_db = {}
@@ -655,6 +657,17 @@ def _rename_file(src):
     os.rename(src, dst)
     return dst
 
+def _add_to_no_attest(no_attest_db, attest_db, key, name, date):
+    if key not in no_attest_db:
+        no_attest_db[key] = {'Name': name, 'no_attest': [date]}
+        if key in attest_db:
+            no_attest_db[key]['attest'] = attest_db[key]
+        else:
+            no_attest_db[key]['attest'] = []
+    else:
+        no_attest_db[key]['no_attest'].append(date)
+
+
 def check_attestation(args):
     """
     Read a csv file that contains data that represents attestation data submitted using an information created
@@ -680,6 +693,7 @@ def check_attestation(args):
     """
     logging.debug("check_attestation({})".format(args))
 
+    # Get the csv data
     csv_filenames = glob.glob(forms_dir + '/*.csv')
     attestation_filename = ''
     service_filename = ''
@@ -698,109 +712,64 @@ def check_attestation(args):
         logging.error("There aren't any service or attestation files")
         return
 
-    '''
-    test_db = {}
-    test_db['johndenisco'] = {'Name': 'John DeNisco', 'key': 'johndenisco', 'dates': ['02/24/2023', '02/10/2023']}
-    test_db['cherylv'] = {'Name': 'Cheryl V', 'key': 'cherylv', 'dates': ['02/24/2023', '02/10/2023']}
-    for key, value in test_db.items():
-        print("{}: {}".format(key, value))
-    with open('test.csv', 'w') as csvfile:
-        fieldnames = ['Name', 'Key', 'Service Dates']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
-        writer.writeheader()
-        for key, value in test_db.items():
-            dates_str = ''
-            for date in value['dates']:
-                dates_str += date + ', '
-            dates_str = dates_str.rstrip(', ')
-            writer.writerow({'Name': value['Name'], 'Key': key, 'Service Dates': dates_str})
-
-    test_db = {}
-    with open('test.csv', 'r') as csvfile:
-        test_db = csv.DictReader(csvfile)
-        for row in enumerate(attestation_data):
-            print(row)
-    '''
-
-    # Create a database that use the name as a key and list of service dates as values 
+    # Create a database that uses the volunteer number as a key. The value is a list of dates that attestations were
+    # filled out 
     attestation_db = {}
     with open(attestation_filename) as attestation_file:
         attestation_data = csv.DictReader(attestation_file)
         for row in enumerate(attestation_data):
-            # jadfix: Should use the volunteer id as the key there could be 2
-            # volunteers with the same name on the same day. I haven't figured
-            # how to get a volgistics report with the volunteer id yet
-            key = row[1]['first_name'] + row[1]['last_name']
-            key = key.replace(' ', '').lower()
-            if row[1]['date'] == '':
-                logging.error("The date doesn't exist for {}".format(key))
+            key = row[1]['volid']
+            if not key: 
+                logging.error("The volunteer id does not exist for record [{}]!".format(row[1]['record_id']))
                 continue
-            date = row[1]['date'].split()[0].replace('-', '/')
-            ds = date.split('/')
-            date = ds[1] + '/' + ds[2] + '/' + ds[0]
-            logging.debug("key: {} date: {}".format(key, date))
+            if row[1]['date'] == '':
+                logging.error("The date doesn't exist for record [{}] and volunteer id [{}]!".format(row[1]['record_id'], key))
+                continue
+
+            date = row[1]['date'].split()[0]
             if key in attestation_db:
                 attestation_db[key].append(date)
             else:
                 attestation_db[key] = []
                 attestation_db[key].append(date)
+            logging.debug("key: {} dates: {}".format(key, attestation_db[key]))
 
-    #with open(attestation_db_filename, 'w') as f:
-    #    json.dump(attestation_db, f)
-
-    volgistics_to_redcap_db = {}
-    if os.path.exists(volgistics_to_redcap_filename):
-        with open(volgistics_to_redcap_filename, 'r') as f:
-            volgistics_to_redcap_db = json.load(f)
-
+    # Create a database of volunteers that have service, but no attestations for
+    # specific dates 
     no_attestation_db = {}
     with open(service_filename) as service_file:
         service_data = csv.DictReader(service_file)
-        volunteer_name = ''
-        key = ''
-        for row in enumerate(service_data):            
-            if row[1]['Volunteer'] != '':
-                vl = row[1]['Volunteer'].split(',')
-                if len(vl) != 2:
-                    logging.error("{} is not a valid name!".format(row[1]['Volunteer']))
-                    continue           
-                volunteer_name = vl[1] + ' ' + vl[0]
-                volunteer_name = volunteer_name.lstrip(' ')
-                key = vl[1] + vl[0]
-                key = key.replace(' ', '').lower().replace(' ', '')
 
-                # Get a redcap key
-                if key in volgistics_to_redcap_db:
-                    if volgistics_to_redcap_db[key] != None:
-                        key = volgistics_to_redcap_db[key] 
+        key = 'No Vol ID'
+        volunteer_name = 'No Name'
+        for row in enumerate(service_data):
 
-            if row[1]['Service To Date'] != '':
-                date = row[1]['Service To Date'].replace('-', '/')
-                logging.debug('Service key: {} date: {}'.format(key, date))
-                if key not in attestation_db:
-                    print("There ARE NOT ANY attestations for {} [{}]".format(volunteer_name, date))
-                    if key not in volgistics_to_redcap_db:
-                        volgistics_to_redcap_db[key] = None
-                    if key not in no_attestation_db:
-                        no_attestation_db[key] = {'Name': volunteer_name, 'no_attest': [date], 'attest': []}
-                    else:
-                        no_attestation_db[key]['no_attest'].append(date)
-                elif date not in attestation_db[key]:
-                    print("There IS NOT AN attestation for {} on {}".format(volunteer_name, date))
-                    print("There are attestations for: {}".format(attestation_db[key]))
-                    if key not in no_attestation_db:
-                        no_attestation_db[key] = {'Name': volunteer_name, 'no_attest': [date], 'attest': attestation_db[key]}
-                    else:
-                        no_attestation_db[key]['no_attest'].append(date)
-                else:
-                    logging.debug("There IS AN attestation for {} on {}".format(volunteer_name, date))
+            # There is no number or name we will take it from the previous loop iteration
+            # This is the case when a volunteer has multiple dates
+            if row[1]['Preferred First Name'] and row[1]['Last Name']:
+                volunteer_name = row[1]['Preferred First Name'] + ' ' + row[1]['Last Name']
+            if row[1]['Number']:
+                key = row[1]['Number']
 
-    with open(volgistics_to_redcap_filename, 'w') as f:
-        json.dump(volgistics_to_redcap_db, f)
+            service_date = time.strptime(row[1]['Service To Date'], "%m-%d-%Y")
+            date = str(service_date.tm_mon) + '/' + str(service_date.tm_mday) + '/' + str(service_date.tm_year)
+            if service_date < min_attestation_date or service_date > max_attestation_date:
+                continue
+
+            # Check the redcap database, if the date is not in it add the date to the no attestation database
+            if key not in attestation_db:
+                _add_to_no_attest(no_attestation_db, attestation_db, key, volunteer_name, date)
+                logging.debug("There ARE NOT ANY attestations for {} [{}] [{}]".format(volunteer_name, key, date))
+            elif date not in attestation_db[key]:
+                _add_to_no_attest(no_attestation_db, attestation_db, key, volunteer_name, date)
+                no_attestation_db[key]['attest'] = attestation_db[key]
+                logging.debug("There IS NOT AN attestation for {} [{}] on {}".format(volunteer_name, key, date))
+                logging.debug("There are attestations for: {}".format(attestation_db[key]))
+            else:
+                logging.debug("There IS AN attestation for {} on {}".format(volunteer_name, date))
 
     with open(no_attest_filename, 'w') as no_attest_file:
-        fieldnames = ['Name', 'Key', 'No Attestation Dates', 'Attestation Dates']
+        fieldnames = ['Name', 'Number', 'No Attestation Dates', 'Attestation Dates']
         writer = csv.DictWriter(no_attest_file, fieldnames=fieldnames)
         writer.writeheader()
 
@@ -813,12 +782,9 @@ def check_attestation(args):
             for date in value['attest']:
                 attests += date + ', '
             attests = attests.rstrip(', ')
-            writer.writerow({'Name': value['Name'], 'Key': key,
+            writer.writerow({'Name': value['Name'], 'Number': key,
                              'No Attestation Dates': no_attests,
                              'Attestation Dates': attests})
-
-    print(no_attestation_db)
-
 
 
 def read_csv(args):

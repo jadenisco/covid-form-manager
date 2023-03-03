@@ -1,15 +1,8 @@
 # Ignore some local files
-emails/
-emails-01/
-emails-02/
+data/
+misc/
 forms/
-forms-01/
 tmp/
-name_db.json
-test_name_db.json
-num_db.json
-patch_db.json
-volgistics_to_redcap.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
