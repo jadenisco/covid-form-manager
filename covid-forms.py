@@ -26,11 +26,11 @@ from PyPDF2 import PdfFileReader, PdfFileWriter
 # number: , last name: , first name:, service dates[]:
 volunteers = {}
 
-# vol_root_dir = '//Cifs2/voldept$'
-vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
+vol_root_dir = '//Cifs2/voldept$'
+# vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
 # vol_root_dir = 'z:/Developer/Windows/testroot'
-# script_dir = vol_root_dir + '/scripts/cfm-test/covid-form-manager'
-script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
+script_dir = vol_root_dir + '/scripts/cfm-test/covid-form-manager'
+# script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
 forms_dir = script_dir + '/forms'
 
 # Volunteer root directories
@@ -770,21 +770,23 @@ def check_attestation(args):
 
     with open(no_attest_filename, 'w') as no_attest_file:
         fieldnames = ['Name', 'Number', 'No Attestation Dates', 'Attestation Dates']
-        writer = csv.DictWriter(no_attest_file, fieldnames=fieldnames)
+        writer = csv.DictWriter(no_attest_file, dialect='excel', fieldnames=fieldnames)
         writer.writeheader()
 
         for key, value in no_attestation_db.items():
-            no_attests = ''
-            for date in value['no_attest']:
-                no_attests += date + ', '
-            no_attests = no_attests.rstrip(', ')
-            attests = ''
-            for date in value['attest']:
-                attests += date + ', '
-            attests = attests.rstrip(', ')
-            writer.writerow({'Name': value['Name'], 'Number': key,
-                             'No Attestation Dates': no_attests,
-                             'Attestation Dates': attests})
+            for i in range(max(len(value['no_attest']), len(value['attest']))):
+                attest = ''
+                no_attest = ''
+                if i < len(value['attest']): attest = value['attest'][i]
+                if i < len(value['no_attest']): no_attest = value['no_attest'][i]
+                if i == 0:
+                    writer.writerow({'Name': value['Name'], 'Number': key,
+                                     'No Attestation Dates': no_attest,
+                                     'Attestation Dates': attest})
+                else:
+                    writer.writerow({'Name': '', 'Number': '',
+                                     'No Attestation Dates': no_attest,
+                                     'Attestation Dates': attest})
 
 
 def read_csv(args):
