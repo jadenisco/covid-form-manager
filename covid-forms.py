@@ -53,8 +53,8 @@ volunteer_name_db = {}
 volunteer_num_db = {}
 patch_db = {}
 
-min_attestation_date = time.strptime('02-12-2023', "%m-%d-%Y")
-max_attestation_date = time.strptime('02-28-2023', "%m-%d-%Y")
+min_attestation_date = time.strptime('03-01-2023', "%m-%d-%Y")
+max_attestation_date = time.strptime('03-10-2023', "%m-%d-%Y")
 
 # jadfix: Don't need these
 dup_volunteers_db = {}
@@ -775,8 +775,8 @@ def check_attestation(args):
 
         for key, value in no_attestation_db.items():
             for i in range(max(len(value['no_attest']), len(value['attest']))):
-                attest = ''
-                no_attest = ''
+                attest = ' -'
+                no_attest = ' -'
                 if i < len(value['attest']): attest = value['attest'][i]
                 if i < len(value['no_attest']): no_attest = value['no_attest'][i]
                 if i == 0:
@@ -784,7 +784,7 @@ def check_attestation(args):
                                      'No Attestation Dates': no_attest,
                                      'Attestation Dates': attest})
                 else:
-                    writer.writerow({'Name': '', 'Number': '',
+                    writer.writerow({'Name': ' -', 'Number': ' -',
                                      'No Attestation Dates': no_attest,
                                      'Attestation Dates': attest})
 

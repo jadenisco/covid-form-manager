@@ -3,6 +3,7 @@ data/
 misc/
 forms/
 tmp/
+*.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
