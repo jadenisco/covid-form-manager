@@ -8,7 +8,7 @@ import json
 import glob
 import time
 import csv
-# from msg_parser import MsOxMessage
+from msg_parser import MsOxMessage
 import email
 from email.header import decode_header
 import shutil
@@ -29,7 +29,7 @@ volunteers = {}
 vol_root_dir = '//Cifs2/voldept$'
 # vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
 # vol_root_dir = 'z:/Developer/Windows/testroot'
-script_dir = vol_root_dir + '/scripts/cfm-test/covid-form-manager'
+script_dir = vol_root_dir + '/scripts/covid-form-manager'
 # script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
 forms_dir = script_dir + '/forms'
 
@@ -53,8 +53,8 @@ volunteer_name_db = {}
 volunteer_num_db = {}
 patch_db = {}
 
-min_attestation_date = time.strptime('03-01-2023', "%m-%d-%Y")
-max_attestation_date = time.strptime('03-10-2023', "%m-%d-%Y")
+min_attestation_date = time.strptime('03-10-2023', "%m-%d-%Y")
+max_attestation_date = time.strptime('03-14-2023', "%m-%d-%Y")
 
 # jadfix: Don't need these
 dup_volunteers_db = {}
@@ -751,9 +751,9 @@ def check_attestation(args):
             if row[1]['Number']:
                 key = row[1]['Number']
 
-            service_date = time.strptime(row[1]['Service To Date'], "%m-%d-%Y")
+            service_date = time.strptime(row[1]['Service To Date'], "%m/%d/%Y")
             date = str(service_date.tm_mon) + '/' + str(service_date.tm_mday) + '/' + str(service_date.tm_year)
-            if service_date < min_attestation_date or service_date > max_attestation_date:
+            if service_date <= min_attestation_date or service_date >= max_attestation_date:
                 continue
 
             # Check the redcap database, if the date is not in it add the date to the no attestation database
@@ -966,7 +966,6 @@ def _read_email_eml(filename):
 def _read_email_msg(filename):
     logging.debug("read_email_msg({})".format(filename))
 
-'''
     msg = MsOxMessage(filename)
     date_time_name = re.findall(r'\d+/\d+/\d+ \d+:\d+:\d+[\r|\n|\t]+[\w+| |-]+[\r|\n]+', msg.body)
     if len(date_time_name) == 0:
@@ -978,8 +977,6 @@ def _read_email_msg(filename):
     name = re.findall(r'[\r|\n|\t]+[\w+| |-]+[\r|\n]+', date_time_name)[0].strip()
 
     return name, date
-'''
-
 
 def _find_directories(name):
     global dirs_to_search
