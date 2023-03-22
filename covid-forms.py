@@ -53,8 +53,8 @@ volunteer_name_db = {}
 volunteer_num_db = {}
 patch_db = {}
 
-min_attestation_date = time.strptime('03-10-2023', "%m-%d-%Y")
-max_attestation_date = time.strptime('03-14-2023', "%m-%d-%Y")
+min_attestation_date = time.strptime('03-14-2023', "%m-%d-%Y")
+max_attestation_date = time.strptime('03-21-2023', "%m-%d-%Y")
 
 # jadfix: Don't need these
 dup_volunteers_db = {}
@@ -657,15 +657,16 @@ def _rename_file(src):
     os.rename(src, dst)
     return dst
 
-def _add_to_no_attest(no_attest_db, attest_db, key, name, date):
-    if key not in no_attest_db:
-        no_attest_db[key] = {'Name': name, 'no_attest': [date]}
-        if key in attest_db:
-            no_attest_db[key]['attest'] = attest_db[key]
-        else:
-            no_attest_db[key]['attest'] = []
-    else:
-        no_attest_db[key]['no_attest'].append(date)
+
+def _str_list(str_list):
+    str = ''
+    sep = ', '
+    for s in str_list:
+        str += s + ', '
+    str = str.rstrip(sep)
+    if str == '':
+        str = '-'
+    return(str)
 
 
 def check_attestation(args):
@@ -734,59 +735,58 @@ def check_attestation(args):
                 attestation_db[key].append(date)
             logging.debug("key: {} dates: {}".format(key, attestation_db[key]))
 
-    # Create a database of volunteers that have service, but no attestations for
-    # specific dates 
-    no_attestation_db = {}
+    # Create a database of volunteers that have service, save dates that there are attestations for,
+    # and save dates that do not have attestations 
     with open(service_filename) as service_file:
         service_data = csv.DictReader(service_file)
 
         key = 'No Vol ID'
         volunteer_name = 'No Name'
+        vs_records = {}
         for row in enumerate(service_data):
-
-            # There is no number or name we will take it from the previous loop iteration
-            # This is the case when a volunteer has multiple dates
-            if row[1]['Preferred First Name'] and row[1]['Last Name']:
-                volunteer_name = row[1]['Preferred First Name'] + ' ' + row[1]['Last Name']
             if row[1]['Number']:
+                # Create and add a new record
                 key = row[1]['Number']
+                volunteer_name = row[1]['Preferred First Name'] + ' ' + row[1]['Last Name']
+                vs_record = {'key': key, 'name': volunteer_name, 'emails': [], 'phone numbers': [], 'no attest dates': [],
+                             'attest dates': []}
+                vs_records[key] = vs_record
 
-            service_date = time.strptime(row[1]['Service To Date'], "%m/%d/%Y")
-            date = str(service_date.tm_mon) + '/' + str(service_date.tm_mday) + '/' + str(service_date.tm_year)
-            if service_date <= min_attestation_date or service_date >= max_attestation_date:
-                continue
-
-            # Check the redcap database, if the date is not in it add the date to the no attestation database
-            if key not in attestation_db:
-                _add_to_no_attest(no_attestation_db, attestation_db, key, volunteer_name, date)
-                logging.debug("There ARE NOT ANY attestations for {} [{}] [{}]".format(volunteer_name, key, date))
-            elif date not in attestation_db[key]:
-                _add_to_no_attest(no_attestation_db, attestation_db, key, volunteer_name, date)
-                no_attestation_db[key]['attest'] = attestation_db[key]
-                logging.debug("There IS NOT AN attestation for {} [{}] on {}".format(volunteer_name, key, date))
-                logging.debug("There are attestations for: {}".format(attestation_db[key]))
-            else:
-                logging.debug("There IS AN attestation for {} on {}".format(volunteer_name, date))
+            if row[1]['Email']:
+                vs_records[key]['emails'].append(row[1]['Email'])
+            if row[1]['Phone Numbers']:
+                vs_records[key]['phone numbers'].append(row[1]['Phone Numbers'])
+            if row[1]['Service To Date']:
+                service_date = time.strptime(row[1]['Service To Date'], "%m-%d-%Y")
+                if service_date >= min_attestation_date and service_date <= max_attestation_date:
+                    s_date =  str(service_date.tm_year) + '-' + '{:02d}'.format(service_date.tm_mon) + '-' + '{:02d}'.format(service_date.tm_mday)
+                    v_date =  '{:02d}'.format(service_date.tm_mon) + '/' + '{:02d}'.format(service_date.tm_mday)+ '/' + str(service_date.tm_year)
+                    if key in attestation_db:
+                        if s_date in attestation_db[key]:
+                            logging.debug("There IS AN attestation for {} on {}".format(volunteer_name, date))
+                            vs_records[key]['attest dates'].append(v_date)
+                        else:
+                            logging.debug("There IS NOT AN attestation for {} [{}] on {}".format(volunteer_name, key, date))
+                            vs_records[key]['no attest dates'].append(v_date)
+                    else:
+                        logging.debug("There ARE NOT ANY attestations for {} [{}] [{}]".format(volunteer_name, key, date))
 
     with open(no_attest_filename, 'w') as no_attest_file:
-        fieldnames = ['Name', 'Number', 'No Attestation Dates', 'Attestation Dates']
+        fieldnames = ['Name', 'Number', 'Phone Numbers', 'Emails', 'No Attestation Dates', 'Attestation Dates']
         writer = csv.DictWriter(no_attest_file, dialect='excel', fieldnames=fieldnames)
         writer.writeheader()
 
-        for key, value in no_attestation_db.items():
-            for i in range(max(len(value['no_attest']), len(value['attest']))):
-                attest = ' -'
-                no_attest = ' -'
-                if i < len(value['attest']): attest = value['attest'][i]
-                if i < len(value['no_attest']): no_attest = value['no_attest'][i]
-                if i == 0:
-                    writer.writerow({'Name': value['Name'], 'Number': key,
-                                     'No Attestation Dates': no_attest,
-                                     'Attestation Dates': attest})
-                else:
-                    writer.writerow({'Name': ' -', 'Number': ' -',
-                                     'No Attestation Dates': no_attest,
-                                     'Attestation Dates': attest})
+        for vs_record in vs_records.items():
+            if len(vs_record[1]['no attest dates']):
+                logging.debug("Name: {}, Number: {}, Phone Numbers: {}, emails: {}, No Attest Dates: {}, Attest Dates: {}".format(
+                    vs_record[1]['name'], vs_record[1]['key'], _str_list(vs_record[1]['phone numbers']),
+                    _str_list(vs_record[1]['emails']), _str_list(vs_record[1]['no attest dates']),
+                    _str_list(vs_record[1]['attest dates'])))
+                writer.writerow({'Name': vs_record[1]['name'], 'Number': vs_record[1]['key'],
+                                 'Phone Numbers': _str_list(vs_record[1]['phone numbers']),
+                                 'Emails': _str_list(vs_record[1]['emails']),
+                                 'No Attestation Dates': _str_list(vs_record[1]['no attest dates']),
+                                 'Attestation Dates': _str_list(vs_record[1]['attest dates'])}) 
 
 
 def read_csv(args):
