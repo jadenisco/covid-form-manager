@@ -53,8 +53,8 @@ volunteer_name_db = {}
 volunteer_num_db = {}
 patch_db = {}
 
-min_attestation_date = time.strptime('03-14-2023', "%m-%d-%Y")
-max_attestation_date = time.strptime('03-21-2023', "%m-%d-%Y")
+min_attestation_date = time.strptime('03-01-2023', "%m-%d-%Y")
+max_attestation_date = time.strptime('03-31-2023', "%m-%d-%Y")
 
 # jadfix: Don't need these
 dup_volunteers_db = {}
@@ -727,7 +727,7 @@ def check_attestation(args):
                 logging.error("The date doesn't exist for record [{}] and volunteer id [{}]!".format(row[1]['record_id'], key))
                 continue
 
-            date = row[1]['date'].split()[0]
+            date = row[1]['electronic_volunteer_attestation_timestamp'].split()[0]
             if key in attestation_db:
                 attestation_db[key].append(date)
             else:
