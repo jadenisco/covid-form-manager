@@ -54,7 +54,7 @@ volunteer_num_db = {}
 patch_db = {}
 
 min_attestation_date = time.strptime('03-01-2023', "%m-%d-%Y")
-max_attestation_date = time.strptime('03-31-2023', "%m-%d-%Y")
+max_attestation_date = time.strptime('04-11-2023', "%m-%d-%Y")
 
 # jadfix: Don't need these
 dup_volunteers_db = {}
