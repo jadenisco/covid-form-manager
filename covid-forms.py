@@ -13,6 +13,7 @@ import email
 from email.header import decode_header
 import shutil
 from PyPDF2 import PdfFileReader, PdfFileWriter
+from string import Template
 # import pdftotext
 
 #if os.name == 'nt': 
@@ -45,6 +46,8 @@ num_db_filename = script_dir + '/num_db.json'
 patch_db_filename = script_dir + '/patch_db.json'
 attestation_db_filename = script_dir + '/attestation_db.json'
 no_attest_filename = forms_dir + '/No Attestations.csv'
+single_email_template_filename = script_dir + '/single_email_template.txt'
+multiple_email_template_filename = script_dir + '/multiple_email_template.txt'
 
 dry_run = False
 tmp_filename = 'tmp.pdf'
@@ -772,21 +775,79 @@ def check_attestation(args):
                         logging.debug("There ARE NOT ANY attestations for {} [{}] [{}]".format(volunteer_name, key, date))
 
     with open(no_attest_filename, 'w') as no_attest_file:
-        fieldnames = ['Name', 'Number', 'Phone Numbers', 'Emails', 'No Attestation Dates', 'Attestation Dates']
+        fieldnames = ['Name', 'Number', 'Phone Numbers', 'Emails', 'No Attestation Dates']
         writer = csv.DictWriter(no_attest_file, dialect='excel', fieldnames=fieldnames)
         writer.writeheader()
 
         for vs_record in vs_records.items():
             if len(vs_record[1]['no attest dates']):
-                logging.debug("Name: {}, Number: {}, Phone Numbers: {}, emails: {}, No Attest Dates: {}, Attest Dates: {}".format(
+                logging.debug("Name: {}, Number: {}, Phone Numbers: {}, emails: {}, No Attest Dates: {}".format(
                     vs_record[1]['name'], vs_record[1]['key'], _str_list(vs_record[1]['phone numbers']),
-                    _str_list(vs_record[1]['emails']), _str_list(vs_record[1]['no attest dates']),
-                    _str_list(vs_record[1]['attest dates'])))
+                    _str_list(vs_record[1]['emails']), _str_list(vs_record[1]['no attest dates'])))
                 writer.writerow({'Name': vs_record[1]['name'], 'Number': vs_record[1]['key'],
                                  'Phone Numbers': _str_list(vs_record[1]['phone numbers']),
                                  'Emails': _str_list(vs_record[1]['emails']),
-                                 'No Attestation Dates': _str_list(vs_record[1]['no attest dates']),
-                                 'Attestation Dates': _str_list(vs_record[1]['attest dates'])}) 
+                                 'No Attestation Dates': _str_list(vs_record[1]['no attest dates'])}) 
+
+
+def create_no_attestation_emails(args):
+    """
+    Read a csv file that contains data that represents dates that the volunteer did not submit an attestation.
+    Once the data is collected create email text to send to the volunteer. This text could then be cut and pasted
+    into an actual email. 
+
+        :param args: The parsed input arguments
+    :type args: Namespace
+
+    Examples: python covid-forms.py create-emails
+  
+    """
+    logging.debug("create_no_attestation_emails({})".format(args))
+
+    # Get the csv data
+    csv_filenames = glob.glob(forms_dir + '/*.csv')
+    no_attestation_filename = ''
+    for filename in csv_filenames:
+        if no_attestation_filename == '':
+            answer = _ask_y_n("Use the file {} as the no attestation file?".format(os.path.basename(filename)), default='n')
+            if answer == 'y':
+                no_attestation_filename = filename
+                break
+    if not no_attestation_filename:
+        logging.error("There aren't any no attestation files")
+        return
+
+    # Read the csv file into a dictionary. Use the templates and
+    # print the email address and email message to be sent
+    t = None
+    with open(single_email_template_filename) as single_template:
+        st = Template(single_template.read())
+    with open(multiple_email_template_filename) as multiple_template:
+        mt = Template(multiple_template.read())
+
+    with open(no_attestation_filename) as no_attestation_file:
+        no_attestation_data = csv.DictReader(no_attestation_file)
+        for row in enumerate(no_attestation_data):
+            print("----------------------------------------------------")
+            first_and_last_name = row[1]['Name'].split(' ')
+            if len(first_and_last_name):
+                first_name = first_and_last_name[0]
+            else:
+                first_name = ''
+            dates = row[1]['No Attestation Dates']
+
+            if len(dates.split()) > 1:
+                email = mt.substitute({'first_name' : first_name, 'dates' : dates})
+            else:
+                email = st.substitute({'first_name' : first_name, 'dates' : dates})
+
+            print("Emails: {}".format(row[1]['Emails']))
+            print(email)
+
+            answer = 'n'
+            while answer == 'n':
+                answer = _ask_y_n("Have you sent the email? ", default='y')
+        print("----------------------------------------------------")
 
 
 def read_csv(args):
@@ -1175,6 +1236,9 @@ if __name__ == '__main__':
 
     sm_parser = sub_parsers.add_parser('read-csv', help='read the csv file')
     sm_parser.set_defaults(func=read_csv)
+
+    sm_parser = sub_parsers.add_parser('create-emails', help='Create emails for missing attestations')
+    sm_parser.set_defaults(func=create_no_attestation_emails)
 
     sm_parser = sub_parsers.add_parser('check-attest', help='check for attestation entries')
     sm_parser.set_defaults(func=check_attestation)

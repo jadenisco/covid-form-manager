@@ -1,0 +1,16 @@
+
+Dear $first_name,
+
+This is John DeNisco from the MGH volunteer department.
+
+We do not have covid attestation for the date $dates.
+
+Could you visit this link and fill out an attestation for the missing date?
+
+https://redcap.partners.org/redcap/surveys/?s=PFRF8FNDKDFRRY37
+
+If you have any questions please feel free to contact us at (617) 726-8540.
+
+Thank you so much for volunteering,
+
+John
