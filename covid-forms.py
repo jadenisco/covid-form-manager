@@ -57,7 +57,7 @@ volunteer_num_db = {}
 patch_db = {}
 
 min_attestation_date = time.strptime('03-01-2023', "%m-%d-%Y")
-max_attestation_date = time.strptime('04-11-2023', "%m-%d-%Y")
+max_attestation_date = time.strptime('04-18-2023', "%m-%d-%Y")
 
 # jadfix: Don't need these
 dup_volunteers_db = {}
@@ -807,18 +807,47 @@ def create_no_attestation_emails(args):
     # Get the csv data
     csv_filenames = glob.glob(forms_dir + '/*.csv')
     no_attestation_filename = ''
+    attestation_makeup_filename = ''
     for filename in csv_filenames:
         if no_attestation_filename == '':
-            answer = _ask_y_n("Use the file {} as the no attestation file?".format(os.path.basename(filename)), default='n')
+            answer = _ask_y_n("Use the file {} as the No Attestation file?".format(os.path.basename(filename)), default='n')
             if answer == 'y':
                 no_attestation_filename = filename
-                break
-    if not no_attestation_filename:
-        logging.error("There aren't any no attestation files")
+                continue
+        if attestation_makeup_filename == '':
+            answer = _ask_y_n("Use the file {} as the Makeup Attestation file?".format(os.path.basename(filename)), default='n')
+            if answer == 'y':
+                attestation_makeup_filename = filename
+                continue 
+    if no_attestation_filename == '' or attestation_makeup_filename == '':
+        logging.error("There aren't any no attestation files or makeup attestation files")
         return
 
-    # Read the csv file into a dictionary. Use the templates and
-    # print the email address and email message to be sent
+    # Read the makeup file and create a database using the id as the key
+    makeup_db = {}
+    with open(attestation_makeup_filename) as attestation_makeup_file:
+        makeup_attestation_data = csv.DictReader(attestation_makeup_file)
+        for row in enumerate(makeup_attestation_data):
+            if not row[1]['id']:
+                logging.error("No id for {} {}, Record # {}".format(row[1]['first_name'],
+                                                                     row[1]['last_name'],
+                                                                     row[1]['record_id']))
+                continue
+            key = row[1]['id']
+            date = ''
+            if row[1]['missing_date']:
+                d = row[1]['missing_date'].split('-')
+                date = d[1] + '/' + d[2] + '/' + d[0]
+            if key in makeup_db:
+                makeup_db[key].append(date)
+            else:
+                makeup_db[key] = []
+                makeup_db[key].append(date)
+            logging.debug("key: {} dates: {}".format(key, makeup_db[key]))
+
+    # Read the no attestation csv file into a dictionary. After checking the makeup
+    # file, use the templates and print the email address and email message to be
+    # sent.
     t = None
     with open(single_email_template_filename) as single_template:
         st = Template(single_template.read())
@@ -829,12 +858,28 @@ def create_no_attestation_emails(args):
         no_attestation_data = csv.DictReader(no_attestation_file)
         for row in enumerate(no_attestation_data):
             print("----------------------------------------------------")
+            key = row[1]['Number']
+            dates = row[1]['No Attestation Dates']
+            logging.debug("      NUMBER: {}".format(key))
+            logging.debug("    NO DATES: {}".format(dates))
+            if key in makeup_db:
+                mk_dates = makeup_db[key]
+                logging.debug("MAKEUP DATES: {}".format(mk_dates))
+                if mk_dates[0]:
+                    ns = set(dates.split(', '))
+                    ms = set(mk_dates)
+                    nd = ns - ms
+                    if nd:
+                        dates = _str_list(nd)
+                        logging.debug("   NEW DATES: {}".format(dates))
+                    else:
+                        continue
+
             first_and_last_name = row[1]['Name'].split(' ')
             if len(first_and_last_name):
                 first_name = first_and_last_name[0]
             else:
                 first_name = ''
-            dates = row[1]['No Attestation Dates']
 
             if len(dates.split()) > 1:
                 email = mt.substitute({'first_name' : first_name, 'dates' : dates})
