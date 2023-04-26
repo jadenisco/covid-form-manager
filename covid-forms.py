@@ -671,6 +671,16 @@ def _str_list(str_list):
         str = '-'
     return(str)
 
+def _dates_not_made_up(makeup_db, vs_record):
+
+    key = vs_record[1]['key']
+    na = set(vs_record[1]['no attest dates'])
+    if key in makeup_db:
+        mk = set(makeup_db[vs_record[1]['key']])
+    else:
+        mk = set([])
+    logging.debug("KEY: {} NA: {} MK: {}".format(key, na, mk))
+    return list(na - mk)
 
 def check_attestation(args):
     """
@@ -697,23 +707,29 @@ def check_attestation(args):
     """
     logging.debug("check_attestation({})".format(args))
 
-    # Get the csv data
+    # Get the csv files
     csv_filenames = glob.glob(forms_dir + '/*.csv')
     attestation_filename = ''
     service_filename = ''
+    makeup_filename = ''
     for filename in csv_filenames:
         if attestation_filename == '':
-            answer = _ask_y_n("Use the file {} as the attestation file?".format(os.path.basename(filename)), default='n')
+            answer = _ask_y_n("Use the file {} as the Attestation file?".format(os.path.basename(filename)), default='n')
             if answer == 'y':
                 attestation_filename = filename
                 continue
         if service_filename == '':
-            answer = _ask_y_n("Use the file {} as the service file?".format(os.path.basename(filename)), default='n')
+            answer = _ask_y_n("Use the file {} as the Service file?".format(os.path.basename(filename)), default='n')
             if answer == 'y':
                 service_filename = filename
                 continue 
-    if attestation_filename == '' or service_filename == '':
-        logging.error("There aren't any service or attestation files")
+        if makeup_filename == '':
+            answer = _ask_y_n("Use the file {} as the Makeup file?".format(os.path.basename(filename)), default='n')
+            if answer == 'y':
+                makeup_filename = filename
+                continue 
+    if attestation_filename == '' or service_filename == '' or makeup_filename == '':
+        logging.error("There aren't any Service, Attestation files or Makeup files")
         return
 
     # Create a database that uses the volunteer number as a key. The value is a list of dates that attestations were
@@ -736,10 +752,10 @@ def check_attestation(args):
             else:
                 attestation_db[key] = []
                 attestation_db[key].append(date)
-            logging.debug("key: {} dates: {}".format(key, attestation_db[key]))
+            logging.debug("Attest key: {} dates: {}".format(key, attestation_db[key]))
 
-    # Create a database of volunteers that have service, save dates that there are attestations for,
-    # and save dates that do not have attestations 
+    # Create a database of volunteers that have service. Save dates that there are attestations for,
+    # and save dates that do not have attestations.
     with open(service_filename) as service_file:
         service_data = csv.DictReader(service_file)
 
@@ -774,6 +790,27 @@ def check_attestation(args):
                     else:
                         logging.debug("There ARE NOT ANY attestations for {} [{}] [{}]".format(volunteer_name, key, date))
 
+    # Create a database that uses the volunteer number as a key. The value is a list of makeup dates.
+    makeup_db = {}
+    with open(makeup_filename) as makeup_file:
+        makeup_data = csv.DictReader(makeup_file)
+        for row in enumerate(makeup_data):
+            key = row[1]['id']
+            if not key: 
+                logging.error("The volunteer id does not exist for record [{}]!".format(row[1]['record_id']))
+                continue
+            if row[1]['missing_date'] == '':
+                logging.error("The date doesn't exist for record [{}] and volunteer id [{}]!".format(row[1]['record_id'], key))
+                continue
+            d = row[1]['missing_date'].split('-')
+            date = d[1] + '/' + d[2] + '/' + d[0]
+            if key in makeup_db:
+                makeup_db[key].append(date)
+            else:
+                makeup_db[key] = []
+                makeup_db[key].append(date)
+            logging.debug("Makeup key: {} dates: {}".format(key, attestation_db[key]))
+
     with open(no_attest_filename, 'w') as no_attest_file:
         fieldnames = ['Name', 'Number', 'Phone Numbers', 'Emails', 'No Attestation Dates']
         writer = csv.DictWriter(no_attest_file, dialect='excel', fieldnames=fieldnames)
@@ -781,13 +818,17 @@ def check_attestation(args):
 
         for vs_record in vs_records.items():
             if len(vs_record[1]['no attest dates']):
+                
+                no_attest_dates = _dates_not_made_up(makeup_db, vs_record)
                 logging.debug("Name: {}, Number: {}, Phone Numbers: {}, emails: {}, No Attest Dates: {}".format(
                     vs_record[1]['name'], vs_record[1]['key'], _str_list(vs_record[1]['phone numbers']),
-                    _str_list(vs_record[1]['emails']), _str_list(vs_record[1]['no attest dates'])))
-                writer.writerow({'Name': vs_record[1]['name'], 'Number': vs_record[1]['key'],
-                                 'Phone Numbers': _str_list(vs_record[1]['phone numbers']),
-                                 'Emails': _str_list(vs_record[1]['emails']),
-                                 'No Attestation Dates': _str_list(vs_record[1]['no attest dates'])}) 
+                    _str_list(vs_record[1]['emails']), _str_list(no_attest_dates)))
+
+                if no_attest_dates:
+                    writer.writerow({'Name': vs_record[1]['name'], 'Number': vs_record[1]['key'],
+                                    'Phone Numbers': _str_list(vs_record[1]['phone numbers']),
+                                    'Emails': _str_list(vs_record[1]['emails']),
+                                    'No Attestation Dates': _str_list(vs_record[1]['no attest dates'])}) 
 
 
 def create_no_attestation_emails(args):
