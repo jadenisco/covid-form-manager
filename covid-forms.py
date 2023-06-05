@@ -27,16 +27,16 @@ from string import Template
 # number: , last name: , first name:, service dates[]:
 volunteers = {}
 
-vol_root_dir = '//Cifs2/voldept$'
-# vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
+# vol_root_dir = '//Cifs2/voldept$'
+vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
 # vol_root_dir = 'z:/Developer/Windows/testroot'
-script_dir = vol_root_dir + '/scripts/covid-form-manager'
-# script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
+# script_dir = vol_root_dir + '/scripts/covid-form-manager'
+script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
 forms_dir = script_dir + '/forms'
 
 # Volunteer root directories
-pet_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/Pet Therapy'
-# pet_volunteer_root_dir = None
+# pet_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/Pet Therapy'
+pet_volunteer_root_dir = None
 adult_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/ADULT MEDICAL AND NONMEDICAL'
 junior_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/JUNIOR MEDICAL AND NONMEDICAL/Active JR Volunteers'
 
@@ -56,8 +56,8 @@ volunteer_name_db = {}
 volunteer_num_db = {}
 patch_db = {}
 
-min_attestation_date = time.strptime('03-13-2023', "%m-%d-%Y")
-max_attestation_date = time.strptime('04-25-2023', "%m-%d-%Y")
+min_attestation_date = time.strptime('04-03-2023', "%m-%d-%Y")
+max_attestation_date = time.strptime('05-15-2023', "%m-%d-%Y")
 
 # jadfix: Don't need these
 dup_volunteers_db = {}
@@ -936,6 +936,91 @@ def create_no_attestation_emails(args):
         print("----------------------------------------------------")
 
 
+# Number of folders inspected before showing the partial list  
+num_partial_show = 50
+folder_inspections = 0
+
+# The maximum directory depth to show
+max_depth_to_display = 1
+depth = 0
+
+# The directory data dictionary
+dirs = []
+
+def show_dir_sizes(num_top_sizes=None):
+    global max_depth_to_display
+    
+    if not num_top_sizes:
+        num_top_sizes = len(dirs)
+
+    sorted_dirs = sorted(dirs, key=lambda item: item[1], reverse=True)
+    for i in range(len(sorted_dirs)):
+        if i > min(num_top_sizes-1, len(sorted_dirs)):
+            break
+        
+        d = sorted_dirs[i]
+        if d[2] <= max_depth_to_display :
+            if d[1] < 1024:
+                print("{:130} {:10d} {:10.2f} B".format(d[0], d[1], d[1]))
+            elif d[1] < 1024**2:
+                print("{:130} {:10d} {:10.2f} KB".format(d[0], d[1], d[1]/1024))
+            elif d[1] < 1024**3:
+                print("{:130} {:10d} {:10.2f} MB".format(d[0], d[1], d[1]/1024**2))
+            elif d[1] < 1024**4:
+                print("{:130} {:10d} {:10.2f} GB".format(d[0], d[1], d[1]/1024**3))
+            else:
+                print("{:130}: {:10d} {:10.2f} TB".format(d[0], d[1], d[1]/1024**4))
+
+
+def _folder_size(folder):
+    global depth
+    global dirs
+    global folder_inspections
+    
+    # The number of top directory sizes to show
+    num_top_sizes = 10
+
+    folder_inspections += 1
+    if folder_inspections >= num_partial_show:
+        folder_inspections = 0
+        show_dir_sizes(num_top_sizes)
+        input("Press return to continue...")
+
+    depth += 1
+    size = os.path.getsize(folder)
+    logging.debug("Depth: {} {} {}".format(depth - 1, folder, size))
+    for i in os.listdir(folder):
+        i_with_path = os.path.join(folder, i)
+        if os.path.isfile(i_with_path):
+            size += os.path.getsize(i_with_path)
+            logging.debug("File {}: {}".format(i, os.path.getsize(i_with_path)))
+        elif os.path.isdir(i_with_path):
+            f_size = _folder_size(i_with_path)
+            size += f_size
+            dirs.append((i_with_path, f_size, depth))
+            logging.debug("{}, {}, {}".format(i_with_path, f_size, depth))
+                    
+    depth -= 1
+    return size
+
+def disk_space(args):
+    """
+    Check the size of a specified directory and it's children. Sort the results.
+
+    This tool can be used to examine disk space usage per directory.
+
+    Examples: python covid-forms.py disk-space
+    """
+    # The root directory to start searching
+    dir_root_to_search = "."
+
+    logging.debug("disk_space({})".format(args))
+    f_size = _folder_size(dir_root_to_search)
+    dirs.append((dir_root_to_search, f_size, 0))
+    logging.debug("{}, {}, {}".format(adult_volunteer_root_dir, f_size, 0))
+    show_dir_sizes()
+
+
 def read_csv(args):
     """
     Read a csv file that contains data that represents covid forms submitted using an app created
@@ -1334,6 +1419,9 @@ if __name__ == '__main__':
 
     mv_parser = sub_parsers.add_parser('move', help='Move the files')
     mv_parser.set_defaults(func=my_move)
+
+    mv_parser = sub_parsers.add_parser('disk-space', help='Check disk space')
+    mv_parser.set_defaults(func=disk_space)
 
     main_args = main_parser.parse_args()
     mgh_util(main_args)
