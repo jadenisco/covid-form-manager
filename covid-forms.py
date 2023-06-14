@@ -27,18 +27,18 @@ from string import Template
 # number: , last name: , first name:, service dates[]:
 volunteers = {}
 
-# vol_root_dir = '//Cifs2/voldept$'
-vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
+vol_root_dir = '//Cifs2/voldept$'
+# vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
 # vol_root_dir = 'z:/Developer/Windows/testroot'
-# script_dir = vol_root_dir + '/scripts/covid-form-manager'
-script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
+script_dir = vol_root_dir + '/scripts/covid-form-manager'
+# script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
 forms_dir = script_dir + '/forms'
 
 # Volunteer root directories
 # pet_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/Pet Therapy'
 pet_volunteer_root_dir = None
 adult_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/ADULT MEDICAL AND NONMEDICAL'
-junior_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/JUNIOR MEDICAL AND NONMEDICAL/Active JR Volunteers'
+junior_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/JUNIOR MEDICAL AND NONMEDICAL/1. Active Juniors'
 
 dirs_to_search = [adult_volunteer_root_dir, junior_volunteer_root_dir, pet_volunteer_root_dir]
 name_db_filename = script_dir + '/name_db.json'
