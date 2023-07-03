@@ -12,7 +12,8 @@ from msg_parser import MsOxMessage
 import email
 from email.header import decode_header
 import shutil
-from PyPDF2 import PdfFileReader, PdfFileWriter
+# from PyPDF2 import PdfFileReader, PdfFileWriter
+from PyPDF2 import PdfReader, PdfWriter
 from string import Template
 # import pdftotext
 
@@ -486,11 +487,17 @@ def _split_pdf(file_to_split, create_dir):
     _create_db()
 
     use_previous_date = False
-    pdf = PdfFileReader(file_to_split)
+    # pdf = PdfFileReader(file_to_split)
 
-    for page in range(pdf.getNumPages()):
-        pdf_writer = PdfFileWriter()
-        pdf_writer.addPage(pdf.getPage(page))
+    # for page in range(pdf.getNumPages()):
+    #    pdf_writer = PdfFileWriter()
+    #    pdf_writer.addPage(pdf.getPage(page))
+
+    pdf = PdfReader(file_to_split)
+
+    for page in range(len(pdf.pages)):
+        pdf_writer = PdfWriter()
+        pdf_writer.add_page(pdf.pages[page])
 
         tpf = os.path.join(os.path.abspath(forms_dir), tmp_filename)
         logging.debug("Creating a temporary file: {}".format(tpf))
