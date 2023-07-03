@@ -35,8 +35,8 @@ script_dir = vol_root_dir + '/scripts/covid-form-manager'
 forms_dir = script_dir + '/forms'
 
 # Volunteer root directories
-# pet_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/Pet Therapy'
-pet_volunteer_root_dir = None
+pet_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/Pet Therapy'
+# pet_volunteer_root_dir = None
 adult_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/ADULT MEDICAL AND NONMEDICAL'
 junior_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/JUNIOR MEDICAL AND NONMEDICAL/1. Active Juniors'
 
@@ -941,11 +941,27 @@ num_partial_show = 50
 folder_inspections = 0
 
 # The maximum directory depth to show
-max_depth_to_display = 1
+max_depth_to_display = 999
 depth = 0
 
 # The directory data dictionary
 dirs = []
+
+def _format_size(size):
+
+    if size < 1024:
+        f_size = "{:10.2f} B".format(size)
+    elif size < 1024**2:
+        f_size = "{:10.2f} KB".format(size/1024)
+    elif size < 1024**3:
+        f_size = "{:10.2f} MB".format(size/1024**2)
+    elif size < 1024**4:
+        f_size = "{:10.2f} GB".format(size/1024**3)
+    else:
+        f_size = "{:10.2f} TB".format(size/1024**4)
+
+    return f_size
+
 
 def show_dir_sizes(num_top_sizes=None):
     global max_depth_to_display
@@ -960,16 +976,7 @@ def show_dir_sizes(num_top_sizes=None):
         
         d = sorted_dirs[i]
         if d[2] <= max_depth_to_display :
-            if d[1] < 1024:
-                print("{:130} {:10d} {:10.2f} B".format(d[0], d[1], d[1]))
-            elif d[1] < 1024**2:
-                print("{:130} {:10d} {:10.2f} KB".format(d[0], d[1], d[1]/1024))
-            elif d[1] < 1024**3:
-                print("{:130} {:10d} {:10.2f} MB".format(d[0], d[1], d[1]/1024**2))
-            elif d[1] < 1024**4:
-                print("{:130} {:10d} {:10.2f} GB".format(d[0], d[1], d[1]/1024**3))
-            else:
-                print("{:130}: {:10d} {:10.2f} TB".format(d[0], d[1], d[1]/1024**4))
+            print("{:150} {}".format(d[0], _format_size(d[1])))
 
 
 def _folder_size(folder):
@@ -980,11 +987,13 @@ def _folder_size(folder):
     # The number of top directory sizes to show
     num_top_sizes = 10
 
+    '''
     folder_inspections += 1
     if folder_inspections >= num_partial_show:
         folder_inspections = 0
         show_dir_sizes(num_top_sizes)
         input("Press return to continue...")
+    '''
 
     depth += 1
     size = os.path.getsize(folder)
@@ -998,7 +1007,10 @@ def _folder_size(folder):
             f_size = _folder_size(i_with_path)
             size += f_size
             dirs.append((i_with_path, f_size, depth))
+            pattern = re.findall(r'Covid Forms \w+\Z', i_with_path)
             logging.debug("{}, {}, {}".format(i_with_path, f_size, depth))
+            if pattern:
+                print("{:150} C: {}".format(i_with_path, _format_size(f_size)))
                     
     depth -= 1
     return size
@@ -1012,7 +1024,7 @@ def disk_space(args):
     Examples: python covid-forms.py disk-space
     """
     # The root directory to start searching
-    dir_root_to_search = "."
+    dir_root_to_search = adult_volunteer_root_dir
 
     logging.debug("disk_space({})".format(args))
     f_size = _folder_size(dir_root_to_search)
