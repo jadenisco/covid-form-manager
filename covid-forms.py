@@ -992,9 +992,9 @@ def _folder_size(folder):
     global folder_inspections
     
     # The number of top directory sizes to show
+    '''
     num_top_sizes = 10
 
-    '''
     folder_inspections += 1
     if folder_inspections >= num_partial_show:
         folder_inspections = 0
