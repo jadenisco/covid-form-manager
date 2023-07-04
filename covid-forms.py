@@ -12,8 +12,8 @@ from msg_parser import MsOxMessage
 import email
 from email.header import decode_header
 import shutil
-# from PyPDF2 import PdfFileReader, PdfFileWriter
-from PyPDF2 import PdfReader, PdfWriter
+from PyPDF2 import PdfFileReader, PdfFileWriter
+# from PyPDF2 import PdfReader, PdfWriter
 from string import Template
 # import pdftotext
 
@@ -28,11 +28,11 @@ from string import Template
 # number: , last name: , first name:, service dates[]:
 volunteers = {}
 
-vol_root_dir = '//Cifs2/voldept$'
-# vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
+# vol_root_dir = '//Cifs2/voldept$'
+vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
 # vol_root_dir = 'z:/Developer/Windows/testroot'
-script_dir = vol_root_dir + '/scripts/covid-form-manager'
-# script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
+# script_dir = vol_root_dir + '/scripts/covid-form-manager'
+script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
 forms_dir = script_dir + '/forms'
 
 # Volunteer root directories
@@ -945,19 +945,18 @@ def create_no_attestation_emails(args):
 
 # Number of folders inspected before showing the partial list  
 num_partial_show = 50
-folder_inspections = 0
 
 # The maximum directory depth to show
 max_depth_to_display = 999
 depth = 0
 
-# The directory data dictionary
-dirs = []
+# The directory data dictionaries
+dirs_with_sizes = []
 
 def _format_size(size):
 
     if size < 1024:
-        f_size = "{:10.2f} B".format(size)
+        f_size = "{:10} B".format(size)
     elif size < 1024**2:
         f_size = "{:10.2f} KB".format(size/1024)
     elif size < 1024**3:
@@ -966,42 +965,40 @@ def _format_size(size):
         f_size = "{:10.2f} GB".format(size/1024**3)
     else:
         f_size = "{:10.2f} TB".format(size/1024**4)
-
     return f_size
+
+
+def handle_covid_dirs():
+
+    for d in dirs_with_sizes:
+        # d[0] = The directory
+        # d[1] = The size 
+        pattern = re.findall(r'Covid Forms \w+\Z', d[0])
+        if pattern:
+            print("{:150} {}".format(d[0], _format_size(d[1])))
 
 
 def show_dir_sizes(num_top_sizes=None):
     global max_depth_to_display
     
     if not num_top_sizes:
-        num_top_sizes = len(dirs)
+        num_top_sizes = len(dirs_with_sizes)
 
-    sorted_dirs = sorted(dirs, key=lambda item: item[1], reverse=True)
-    for i in range(len(sorted_dirs)):
-        if i > min(num_top_sizes-1, len(sorted_dirs)):
+    for i in range(len(dirs_with_sizes)):
+        # d[0] = The directory
+        # d[1] = The size 
+        if i > min(num_top_sizes-1, len(dirs_with_sizes)):
             break
         
-        d = sorted_dirs[i]
+        d = dirs_with_sizes[i]
         if d[2] <= max_depth_to_display :
             print("{:150} {}".format(d[0], _format_size(d[1])))
 
 
 def _folder_size(folder):
     global depth
-    global dirs
-    global folder_inspections
+    global dirs_with_sizes
     
-    # The number of top directory sizes to show
-    '''
-    num_top_sizes = 10
-
-    folder_inspections += 1
-    if folder_inspections >= num_partial_show:
-        folder_inspections = 0
-        show_dir_sizes(num_top_sizes)
-        input("Press return to continue...")
-    '''
-
     depth += 1
     size = os.path.getsize(folder)
     logging.debug("Depth: {} {} {}".format(depth - 1, folder, size))
@@ -1013,11 +1010,8 @@ def _folder_size(folder):
         elif os.path.isdir(i_with_path):
             f_size = _folder_size(i_with_path)
             size += f_size
-            dirs.append((i_with_path, f_size, depth))
-            pattern = re.findall(r'Covid Forms \w+\Z', i_with_path)
+            dirs_with_sizes.append((i_with_path, f_size, depth))
             logging.debug("{}, {}, {}".format(i_with_path, f_size, depth))
-            if pattern:
-                print("{:150} C: {}".format(i_with_path, _format_size(f_size)))
                     
     depth -= 1
     return size
@@ -1030,14 +1024,18 @@ def disk_space(args):
 
     Examples: python covid-forms.py disk-space
     """
+    global dirs_with_sizes
+
     # The root directory to start searching
     dir_root_to_search = adult_volunteer_root_dir
 
     logging.debug("disk_space({})".format(args))
     f_size = _folder_size(dir_root_to_search)
-    dirs.append((dir_root_to_search, f_size, 0))
+    dirs_with_sizes.append((dir_root_to_search, f_size, 0))
     logging.debug("{}, {}, {}".format(adult_volunteer_root_dir, f_size, 0))
-    show_dir_sizes()
+    dirs_with_sizes = sorted(dirs_with_sizes, key=lambda item: item[1], reverse=True)
+    #show_dir_sizes()
+    handle_covid_dirs()
 
 
 def read_csv(args):
