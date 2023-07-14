@@ -28,18 +28,16 @@ from string import Template
 # number: , last name: , first name:, service dates[]:
 volunteers = {}
 
-# vol_root_dir = '//Cifs2/voldept$'
-vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot'
-# vol_root_dir = 'z:/Developer/Windows/testroot'
-# script_dir = vol_root_dir + '/scripts/covid-form-manager'
-script_dir = vol_root_dir + '/scripts/cfm-mac/covid-form-manager'
+# vol_root_dir = '//Cifs2/voldept$/.Volunteer Files'
+vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot/.Volunteer Files'
+script_dir = vol_root_dir + '/scripts/covid-form-manager'
 forms_dir = script_dir + '/forms'
+archive_dir = script_dir + '/archive'
 
 # Volunteer root directories
-pet_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/Pet Therapy'
-# pet_volunteer_root_dir = None
-adult_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/ADULT MEDICAL AND NONMEDICAL'
-junior_volunteer_root_dir = vol_root_dir + '/.Volunteer Files/JUNIOR MEDICAL AND NONMEDICAL/1. Active Juniors'
+pet_volunteer_root_dir = vol_root_dir + '/Pet Therapy'
+adult_volunteer_root_dir = vol_root_dir + '/ADULT MEDICAL AND NONMEDICAL'
+junior_volunteer_root_dir = vol_root_dir + '/JUNIOR MEDICAL AND NONMEDICAL/1. Active Juniors'
 
 dirs_to_search = [adult_volunteer_root_dir, junior_volunteer_root_dir, pet_volunteer_root_dir]
 name_db_filename = script_dir + '/name_db.json'
@@ -232,6 +230,7 @@ def _show_pdf(pdf_filename):
     else:
         raise Exception('Unsupported Operating System')
 
+
 # jadfix: look here
 def _create_name_directory_db(root_dir):
     global volunteer_name_dir_db
@@ -253,6 +252,7 @@ def _create_name_directory_db(root_dir):
                 db_entry_list.append(name_with_path)
                 volunteer_name_dir_db[key] = db_entry_list
 
+
 def _patch_db():
     global volunteer_name_db
     global volunteer_num_db
@@ -263,6 +263,7 @@ def _patch_db():
             patch_db = json.load(f)
             volunteer_name_db |= patch_db
             volunteer_num_db |= patch_db
+
 
 def _create_db():
     global dirs_to_search
@@ -364,6 +365,7 @@ def _create_directory_db(root_dir):
                         del volunteer_dir_db[vol_num]
                     dup_volunteers_db[vol_num].append(name_with_path)
 
+
 def _create_volunteer_directory_db():
     global adult_volunteer_root_dir
     global junior_volunteer_root_dir
@@ -396,6 +398,7 @@ def _create_volunteer_directory(volunteer_number):
             volunteer_dir_db[volunteer_number] = dirname
     else:
         logging.debug('A Directory for {} already exists'.format(volunteer_number))
+
 
 def _extract_page_filename(page_filename, page_number):
 
@@ -438,6 +441,7 @@ def _extract_page_filename(page_filename, page_number):
     new_filename = os.path.join(os.path.abspath(forms_dir), new_filename)
 
     return new_filename, volunteer_num, volunteer_name
+
 
 def _get_page_filename(page_number):
     global month_on_form
@@ -547,12 +551,29 @@ def create_directories(args):
     # Parse the csv data and create the directory structure
     create_validate_forms(True)
 
+
 def _show_form_dir(forms_dir):
     print('-----------------------------------')
     print(forms_dir.replace(vol_root_dir, ''))
     if not dry_run:
         for name in os.listdir(forms_dir):
             print('   {}'.format(name))
+
+
+def _archive_dir(src, dst):
+    logging.debug("_archive_dir: {}".format(src))
+    logging.debug("              {}".format(dst))
+
+    if dry_run:
+        return
+
+    try:
+        shutil.copytree(src, dst)
+        # shutil.move(src, dst)
+    except FileExistsError:
+        logging.error("File exists: {}".format(dst))
+
+
 
 def _execute_move(src, dst):
     logging.debug("_execute_move({}, {})".format(os.path.basename(src), dst))
@@ -951,46 +972,49 @@ max_depth_to_display = 999
 depth = 0
 
 # The directory data dictionaries
-dirs_with_sizes = []
+_dirs_with_sizes = []
 
 def _format_size(size):
 
-    if size < 1024:
+    if size < 1000:
         f_size = "{:10} B".format(size)
-    elif size < 1024**2:
-        f_size = "{:10.2f} KB".format(size/1024)
-    elif size < 1024**3:
-        f_size = "{:10.2f} MB".format(size/1024**2)
-    elif size < 1024**4:
-        f_size = "{:10.2f} GB".format(size/1024**3)
+    elif size < 1000**2:
+        f_size = "{:10.2f} KB".format(size/1000)
+    elif size < 1000**3:
+        f_size = "{:10.2f} MB".format(size/1000**2)
+    elif size < 1000**4:
+        f_size = "{:10.2f} GB".format(size/1000**3)
     else:
-        f_size = "{:10.2f} TB".format(size/1024**4)
+        f_size = "{:10.2f} TB".format(size/1000**4)
     return f_size
 
+def handle_covid_dirs(dirs_to_handle):
 
-def handle_covid_dirs():
-
-    for d in dirs_with_sizes:
+    covid_dirs_size = 0
+    for d in dirs_to_handle:
         # d[0] = The directory
-        # d[1] = The size 
+        # d[1] = The size
         pattern = re.findall(r'Covid Forms \w+\Z', d[0])
         if pattern:
-            print("{:150} {}".format(d[0], _format_size(d[1])))
+            covid_dirs_size += d[1]
+            _archive_dir(d[0], archive_dir + '/' + d[0].lstrip(vol_root_dir))
+        
+    print("Covid Dirs Total: {}".format(_format_size(covid_dirs_size)))
+    print("Archived Dirs:    {}".format(_format_size(_folder_size(archive_dir))))
 
-
-def show_dir_sizes(num_top_sizes=None):
+def show_dir_sizes(dir_to_show, num_top_sizes=None):
     global max_depth_to_display
     
     if not num_top_sizes:
-        num_top_sizes = len(dirs_with_sizes)
+        num_top_sizes = len(dir_to_show)
 
-    for i in range(len(dirs_with_sizes)):
-        # d[0] = The directory
-        # d[1] = The size 
-        if i > min(num_top_sizes-1, len(dirs_with_sizes)):
+    for i in range(len(dir_to_show)):
+        if i > min(num_top_sizes-1, len(dir_to_show)):
             break
         
-        d = dirs_with_sizes[i]
+        # d[0] = The directory
+        # d[1] = The size 
+        d = dir_to_show[i]
         if d[2] <= max_depth_to_display :
             print("{:150} {}".format(d[0], _format_size(d[1])))
 
@@ -1000,7 +1024,7 @@ def _folder_size(folder):
     global dirs_with_sizes
     
     depth += 1
-    size = os.path.getsize(folder)
+    size = 0
     logging.debug("Depth: {} {} {}".format(depth - 1, folder, size))
     for i in os.listdir(folder):
         i_with_path = os.path.join(folder, i)
@@ -1010,7 +1034,7 @@ def _folder_size(folder):
         elif os.path.isdir(i_with_path):
             f_size = _folder_size(i_with_path)
             size += f_size
-            dirs_with_sizes.append((i_with_path, f_size, depth))
+            _dirs_with_sizes.append((i_with_path, f_size, depth))
             logging.debug("{}, {}, {}".format(i_with_path, f_size, depth))
                     
     depth -= 1
@@ -1031,11 +1055,11 @@ def disk_space(args):
 
     logging.debug("disk_space({})".format(args))
     f_size = _folder_size(dir_root_to_search)
-    dirs_with_sizes.append((dir_root_to_search, f_size, 0))
+    _dirs_with_sizes.append((dir_root_to_search, f_size, 0))
     logging.debug("{}, {}, {}".format(adult_volunteer_root_dir, f_size, 0))
-    dirs_with_sizes = sorted(dirs_with_sizes, key=lambda item: item[1], reverse=True)
-    #show_dir_sizes()
-    handle_covid_dirs()
+    sorted_dirs_with_sizes = sorted(_dirs_with_sizes, key=lambda item: item[1], reverse=True)
+    # show_dir_sizes(sorted_dirs_with_sizes)
+    handle_covid_dirs(sorted_dirs_with_sizes)
 
 
 def read_csv(args):

@@ -3,6 +3,7 @@ data/
 misc/
 forms/
 tmp/
+archive/
 *.json
 
 # Byte-compiled / optimized / DLL files
