@@ -28,9 +28,9 @@ from string import Template
 # number: , last name: , first name:, service dates[]:
 volunteers = {}
 
-# vol_root_dir = '//Cifs2/voldept$/.Volunteer Files'
-vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot/.Volunteer Files'
-script_dir = vol_root_dir + '/scripts/covid-form-manager'
+vol_root_dir = '//Cifs2/voldept$/.Volunteer Files'
+# vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot/.Volunteer Files'
+script_dir = '//Cifs2/voldept$/' + '/Scripts/covid-form-manager'
 forms_dir = script_dir + '/forms'
 archive_dir = script_dir + '/archive'
 
@@ -997,7 +997,7 @@ def handle_covid_dirs(dirs_to_handle):
         pattern = re.findall(r'Covid Forms \w+\Z', d[0])
         if pattern:
             covid_dirs_size += d[1]
-            _archive_dir(d[0], archive_dir + '/' + d[0].lstrip(vol_root_dir))
+            # _archive_dir(d[0], archive_dir + '/' + d[0].lstrip(vol_root_dir))
         
     print("Covid Dirs Total: {}".format(_format_size(covid_dirs_size)))
     print("Archived Dirs:    {}".format(_format_size(_folder_size(archive_dir))))
