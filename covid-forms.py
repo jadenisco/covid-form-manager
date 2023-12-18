@@ -31,6 +31,7 @@ volunteers = {}
 vol_root_dir = '//Cifs2/voldept$/.Volunteer Files'
 # vol_root_dir = '/Users/jdenisco/Developer/Windows/testroot/.Volunteer Files'
 script_dir = '//Cifs2/voldept$/' + '/Scripts/covid-form-manager'
+#script_dir = vol_root_dir + '/scripts/covid-form-manager'
 forms_dir = script_dir + '/forms'
 archive_dir = script_dir + '/archive'
 
@@ -214,6 +215,9 @@ def _show_pdf(pdf_filename):
 
     if dry_run:
         return
+
+    # Fix the filename for open
+    pdf_filename = pdf_filename.replace(' ', '\\ ')
 
     if os.name == 'nt':
         # jadfix: try this again
@@ -491,17 +495,17 @@ def _split_pdf(file_to_split, create_dir):
     _create_db()
 
     use_previous_date = False
-    # pdf = PdfFileReader(file_to_split)
+    pdf = PdfFileReader(file_to_split)
 
-    # for page in range(pdf.getNumPages()):
-    #    pdf_writer = PdfFileWriter()
-    #    pdf_writer.addPage(pdf.getPage(page))
+    for page in range(pdf.getNumPages()):
+        pdf_writer = PdfFileWriter()
+        pdf_writer.addPage(pdf.getPage(page))
 
-    pdf = PdfReader(file_to_split)
+    # pdf = PdfReader(file_to_split)
 
-    for page in range(len(pdf.pages)):
-        pdf_writer = PdfWriter()
-        pdf_writer.add_page(pdf.pages[page])
+    #for page in range(len(pdf.pages)):
+    #    pdf_writer = PdfWriter()
+    #    pdf_writer.add_page(pdf.pages[page])
 
         tpf = os.path.join(os.path.abspath(forms_dir), tmp_filename)
         logging.debug("Creating a temporary file: {}".format(tpf))
@@ -587,7 +591,7 @@ def _execute_move(src, dst):
     cv_month = calendar.month_name[int(cv_date[0])]
     cv_year = cv_date[2]
 
-    cv_form_dir = 'Covid Forms {}'.format(cv_year)
+    cv_form_dir = 'MGB Work Pass {}'.format(cv_year)
     cv_form_dir = os.path.join(dst, cv_form_dir)
     if not os.path.isdir(cv_form_dir):
         if not dry_run:
